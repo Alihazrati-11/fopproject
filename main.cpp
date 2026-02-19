@@ -1,14 +1,18 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfx.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
+#include <string>
 #include <vector>
 #include <iostream>
 using namespace std;
+
 const int WINDOW_WIDTH  = 1000, WINDOW_HEIGHT = 600;
 
 // ناحیه‌ها
-SDL_Rect leftPanel  = { 10, 40, 200, 550 };   // پالت بلاک‌ها
-SDL_Rect workspace  = { 220, 40, 470, 550 };  // محیط بلاک‌ها
-SDL_Rect stagePanel = { 700, 40, 290, 550 };  // صحنه
+SDL_Rect leftPanel  = { 80, 50, 200, 550 };   // پالت بلاک‌ها
+SDL_Rect workspace  = { 280, 50, 470, 550 };  // محیط بلاک‌ها
+SDL_Rect stagePanel = { 710, 50, 290, 550 };  // صحنه
 
 // اسپرایت دایره‌ای
 int spriteX = 845, spriteY = 315, spriteR = 20;
@@ -39,6 +43,7 @@ bool pointInRect(int x, int y, const SDL_Rect& r) {
 struct BlockType {
     SDL_Color color;
     SDL_Rect  protoRect;
+    string name;
 };
 
 struct BlockInstance {
@@ -49,34 +54,55 @@ struct BlockInstance {
     int dragStartX = 0, dragStartY = 0;
 };
 
+void writeCenteredText(SDL_Renderer *ren, TTF_Font* font, string text, SDL_Rect rect){
+    SDL_Color white={255, 255, 255, 255};
+    SDL_Surface *surf=TTF_RenderText_Blended(font, text.c_str(), white);
+    SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
+    int tw, th;
+    SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
+    SDL_Rect dst = { rect.x + (rect.w - tw)/2, rect.y + (rect.h - th)/2, tw, th };
+    SDL_RenderCopy(ren, tex, NULL, &dst);
+    SDL_FreeSurface(surf);
+    SDL_DestroyTexture(tex);
+}
+
 int main(int argc, char* argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
+    TTF_Init();
+    IMG_Init(IMG_INIT_PNG);
     SDL_Window* win = SDL_CreateWindow(
         "main window",SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    TTF_Font* font = TTF_OpenFont("calibrib.ttf", 18);
 
     // تعریف چند نوع بلاک با رنگ‌های مشابه Scratch
     vector <BlockType> blockTypes = {
         // Motion
-        { {  70,150,255,255}, { 30,  50, 160, 40 } },
+        { {  70,150,255,255}, { 0,  50, 80, 50 } , "motion"},
         // Looks
-        { { 150,100,255,255}, { 30, 100, 160, 40 } },
+        { { 150,100,255,255}, { 0, 100, 80, 50 } , "looks"},
         // Sound
-        { { 210, 100,210,255}, { 30, 150, 160, 40 } },
+        { { 210, 100,210,255}, { 0, 150, 80, 50 }, "sound" },
         // Events
-        { { 255,210,  0,255}, { 30, 200, 160, 40 } },
+        { { 255,210,  0,255}, { 0, 200, 80, 50 } , "events"},
         // Control
-        { { 255,170, 25,255}, { 30, 250, 160, 40 } },
+        { { 255,170, 25,255}, { 0, 250, 80, 50 } , "control"},
         // Sensing
-        { {  90,180,210,255}, { 30, 300, 160, 40 } },
+        { {  90,180,210,255}, { 0, 300, 80, 50 } , "senses"},
         // Operators
-        { {  90,190, 90,255}, { 30, 350, 160, 40 } },
+        { {  90,190, 90,255}, { 0, 350, 80, 50 } , "operators"},
         // Variables
-        { { 255,140, 25,255}, { 30, 400, 160, 40 } }
+        { { 255,140, 25,255}, { 0, 400, 80, 50 } , "variables"}
     };
 
     vector <BlockInstance> instances;
+
+    //آپلود لوگو
+    int logo_w, logo_h;
+    SDL_Texture *logo= IMG_LoadTexture(ren, "logo.png");
+    SDL_QueryTexture(logo, NULL, NULL, &logo_w, &logo_h);
+    SDL_Rect logoSize ={-20, -35, 120, 120};
 
     bool running = true;
     while (running) {
@@ -165,22 +191,27 @@ int main(int argc, char* argv[]) {
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
-        //منوی فایل ولوگو
-        boxRGBA(ren, 0, 0, WINDOW_WIDTH, 38, 160, 70, 165, 200);
+        //منوی فایل و لوگو
+        boxRGBA(ren, 0, 0, WINDOW_WIDTH, 48, 160, 70, 165, 200);
+        SDL_RenderCopy(ren, logo, NULL, &logoSize);
 
         // پنل‌ها
         drawRect(ren, leftPanel,  {255,255,255,255});
         drawRect(ren, workspace,  {248,249,255,255});
         drawRect(ren, stagePanel, {240,244,255,255});
+        vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
+        vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
 
         // بلوک‌های پالت
-        for (auto& bt : blockTypes)
+        for (auto& bt : blockTypes){
             drawRect(ren, bt.protoRect, bt.color);
+            writeCenteredText(ren, font, bt.name, bt.protoRect);
+        }
 
         // بلوک‌های داخل Workspace
         for (auto& b : instances) {
-            auto& bt = blockTypes[b.typeIndex];
-            drawRect(ren, b.rect, bt.color);
+            drawRect(ren, b.rect, blockTypes[b.typeIndex].color);
+            writeCenteredText(ren, font, blockTypes[b.typeIndex].name, b.rect);
         }
 
         // اسپرایت
@@ -189,8 +220,12 @@ int main(int argc, char* argv[]) {
         SDL_Delay(16);
     }
 
+    TTF_CloseFont(font);
+    TTF_Quit();
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
+    SDL_DestroyTexture(logo);
+    IMG_Quit();
     SDL_Quit();
     return 0;
 }
