@@ -28,9 +28,8 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="drag and drop for mario in right pannel">
+    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="splite stage panel and limit mario(sprite)">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -257,8 +256,8 @@
       <method v="2" />
     </configuration>
     <list>
-      <item itemvalue="C/C++ File.main.cpp" />
       <item itemvalue="CMake Application.Project" />
+      <item itemvalue="C/C++ File.main.cpp" />
     </list>
   </component>
   <component name="TaskManager">
@@ -277,7 +276,9 @@
       <workItem from="1771588776214" duration="60000" />
       <workItem from="1771589075702" duration="722000" />
       <workItem from="1771592258719" duration="1999000" />
-      <workItem from="1771595934851" duration="901000" />
+      <workItem from="1771595934851" duration="1438000" />
+      <workItem from="1771601902748" duration="19000" />
+      <workItem from="1771604124499" duration="8000" />
     </task>
     <task id="LOCAL‎−۰۰۰۰۱" summary="optian load only visual">
       <option name="closed" value="true" />
@@ -330,7 +331,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771594224700</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="splite stage panel and limit mario(sprite)">
+      <option name="closed" value="true" />
+      <created>1771597055844</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1771597055844</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -358,6 +367,7 @@
     <MESSAGE value="option load and save" />
     <MESSAGE value="tanzim jay logo and add mario sprite" />
     <MESSAGE value="drag and drop for mario in right pannel" />
-    <option name="LAST_COMMIT_MESSAGE" value="drag and drop for mario in right pannel" />
+    <MESSAGE value="splite stage panel and limit mario(sprite)" />
+    <option name="LAST_COMMIT_MESSAGE" value="splite stage panel and limit mario(sprite)" />
   </component>
 </project>
