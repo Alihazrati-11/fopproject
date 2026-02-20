@@ -6,40 +6,36 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+
 using namespace std;
 
-const int WINDOW_WIDTH  = 1000, WINDOW_HEIGHT = 600;
+const int WINDOW_WIDTH = 1000, WINDOW_HEIGHT = 600;
 const int MENU_H = 48;
 
 // ناحیه‌ها
-SDL_Rect leftPanel  = { 80, 50, 200, 550 };
-SDL_Rect workspace  = { 280, 50, 470, 550 };
-SDL_Rect stagePanel = { 710, 50, 290, 550 };
+SDL_Rect leftPanel = {80, 50, 200, 550};
+SDL_Rect workspace = {280, 50, 470, 550};
+SDL_Rect stagePanel = {710, 50, 290, 550};
 
 //تعریف محدوده مربع بالایی برای ماریو
-SDL_Rect spriteArea = { 710, 50, 290, 275 };
+SDL_Rect spriteArea = {710, 50, 290, 275};
+SDL_Texture *marioTexture = NULL;
 
-SDL_Texture* marioTexture = NULL ;
 // متغیر ذخیره عکس
-SDL_Rect marioRect = {810 , 100 , 90 , 90 } ;
-// موقعیت
-bool isDragging = false ;
-int offsetX = 0;
-int offsetY = 0  ;
+SDL_Rect marioRect = {810, 100, 90, 90};
 
-void drawRect(SDL_Renderer* ren, SDL_Rect r, SDL_Color fill) {
+void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(ren, &r);
 }
 
-
-bool pointInRect(int x, int y, const SDL_Rect& r) {
+bool pointInRect(int x, int y, const SDL_Rect &r) {
     return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 
 struct BlockType {
     SDL_Color color;
-    SDL_Rect  protoRect;
+    SDL_Rect protoRect;
     string name;
 };
 
@@ -51,47 +47,46 @@ struct BlockInstance {
     int dragStartX = 0, dragStartY = 0;
 };
 
-void writeCenteredText(SDL_Renderer *ren, TTF_Font* font, string text, SDL_Rect rect){
-    SDL_Color white={255, 255, 255, 255};
-    SDL_Surface *surf=TTF_RenderText_Blended(font, text.c_str(), white);
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
+void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, string text, SDL_Rect rect) {
+    SDL_Color white = {255, 255, 255, 255};
+    SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
+    SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
     int tw, th;
     SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
-    SDL_Rect dst = { rect.x + (rect.w - tw)/2, rect.y + (rect.h - th)/2, tw, th };
+    SDL_Rect dst = {rect.x + (rect.w - tw) / 2, rect.y + (rect.h - th) / 2, tw, th};
     SDL_RenderCopy(ren, tex, NULL, &dst);
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(tex);
 }
 
-void writeLeftText(SDL_Renderer *ren, TTF_Font* font, string text, SDL_Rect rect, int pad = 8){
-    SDL_Color white={255, 255, 255, 255};
-    SDL_Surface *surf=TTF_RenderText_Blended(font, text.c_str(), white);
-    SDL_Texture* tex = SDL_CreateTextureFromSurface(ren, surf);
+void writeLeftText(SDL_Renderer *ren, TTF_Font *font, string text, SDL_Rect rect, int pad = 8) {
+    SDL_Color white = {255, 255, 255, 255};
+    SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
+    SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
     int tw, th;
     SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
-    SDL_Rect dst = { rect.x + pad, rect.y + (rect.h - th)/2, tw, th };
+    SDL_Rect dst = {rect.x + pad, rect.y + (rect.h - th) / 2, tw, th};
     SDL_RenderCopy(ren, tex, NULL, &dst);
     SDL_FreeSurface(surf);
     SDL_DestroyTexture(tex);
 }
 
 string getProjectPath() {
-    char* base = SDL_GetBasePath();
+    char *base = SDL_GetBasePath();
     string path;
     if (base) {
         path = string(base) + "project.txt";
         SDL_free(base);
-    } else {
+    } else
         path = "project.txt";
-    }
     return path;
 }
 
-bool saveBlocks(const string& path, const vector<BlockInstance>& instances) {
+bool saveBlocks(const string &path, const vector<BlockInstance> &instances) {
     ofstream out(path);
     if (!out) return false;
     out << instances.size() << "\n";
-    for (auto& b : instances) {
+    for (auto &b: instances) {
         out << b.typeIndex << " "
             << b.rect.x << " " << b.rect.y << " "
             << b.rect.w << " " << b.rect.h << "\n";
@@ -99,7 +94,7 @@ bool saveBlocks(const string& path, const vector<BlockInstance>& instances) {
     return true;
 }
 
-bool loadBlocks(const string& path, vector<BlockInstance>& instances) {
+bool loadBlocks(const string &path, vector<BlockInstance> &instances) {
     ifstream in(path);
     if (!in) return false;
     size_t n = 0;
@@ -107,9 +102,7 @@ bool loadBlocks(const string& path, vector<BlockInstance>& instances) {
     instances.clear();
     for (size_t i = 0; i < n; ++i) {
         BlockInstance b;
-        in >> b.typeIndex
-           >> b.rect.x >> b.rect.y
-           >> b.rect.w >> b.rect.h;
+        in >> b.typeIndex >> b.rect.x >> b.rect.y >> b.rect.w >> b.rect.h;
         b.lastValidX = b.rect.x;
         b.lastValidY = b.rect.y;
         b.dragging = false;
@@ -119,23 +112,19 @@ bool loadBlocks(const string& path, vector<BlockInstance>& instances) {
 }
 
 // دیالوگ پرسش برای ذخیره قبل از New
-int confirmSaveBeforeNew(SDL_Window* win) {
+int confirmSaveBeforeNew(SDL_Window *win) {
     const SDL_MessageBoxButtonData buttons[] = {
-        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes (Save)" },
-        { 0, 2, "No (Don't Save)" },
-        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel" }
+            {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes (Save)"},
+            {0,                                       2, "No (Don't Save)"},
+            {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel"}
     };
-
-    const SDL_MessageBoxColorScheme colorScheme = {
-        {
-            { 255, 255, 255 }, // background
-            {   0,   0,   0 }, // text
-            { 100, 100, 100 }, // button border
-            { 220, 220, 220 }, // button background
-            {   0,   0,   0 }  // button selected
-        }
-    };
-
+    const SDL_MessageBoxColorScheme colorScheme = {{
+                                                           {255, 255, 255}, // background
+                                                           {0, 0, 0}, // text
+                                                           {100, 100, 100}, // button border
+                                                           {220, 220, 220}, // button background
+                                                           {0, 0, 0}  // button selected
+                                                   }};
     SDL_MessageBoxData data = {};
     data.flags = SDL_MESSAGEBOX_INFORMATION;
     data.window = win;
@@ -144,48 +133,44 @@ int confirmSaveBeforeNew(SDL_Window* win) {
     data.numbuttons = 3;
     data.buttons = buttons;
     data.colorScheme = &colorScheme;
-
     int buttonid = 0;
     SDL_ShowMessageBox(&data, &buttonid);
     return buttonid; // 1=Yes, 2=No, 0=Cancel
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     SDL_Init(SDL_INIT_VIDEO);
     TTF_Init();
     IMG_Init(IMG_INIT_PNG);
+    SDL_Window *win = SDL_CreateWindow(
+            "main window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+            WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+    SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    TTF_Font *font = TTF_OpenFont("calibrib.ttf", 18);
 
-    SDL_Window* win = SDL_CreateWindow(
-        "main window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN
-    );
-    SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    TTF_Font* font = TTF_OpenFont("calibrib.ttf", 18);
 //بارگذاری قارچ اسپرایت
-marioTexture = IMG_LoadTexture(ren, "mario.png") ;
-    SDL_SetTextureBlendMode(marioTexture ,SDL_BLENDMODE_BLEND) ;
-    vector <BlockType> blockTypes = {
-        { {  70,150,255,255}, { 0,  50, 80, 50 } , "motion"},
-        { { 150,100,255,255}, { 0, 100, 80, 50 } , "looks"},
-        { { 210, 100,210,255}, { 0, 150, 80, 50 }, "sound" },
-        { { 255,210,  0,255}, { 0, 200, 80, 50 } , "events"},
-        { { 255,170, 25,255}, { 0, 250, 80, 50 } , "control"},
-        { {  90,180,210,255}, { 0, 300, 80, 50 } , "senses"},
-        { {  90,190, 90,255}, { 0, 350, 80, 50 } , "operators"},
-        { { 255,140, 25,255}, { 0, 400, 80, 50 } , "variables"}
-    } ;
+    marioTexture = IMG_LoadTexture(ren, "mario.png");
+    SDL_SetTextureBlendMode(marioTexture, SDL_BLENDMODE_BLEND);
 
-    vector <BlockInstance> instances;
+    vector<BlockType> blockTypes = {
+            {{70,  150, 255, 255}, {0, 50,  80, 50}, "motion"},
+            {{150, 100, 255, 255}, {0, 100, 80, 50}, "looks"},
+            {{210, 100, 210, 255}, {0, 150, 80, 50}, "sound"},
+            {{255, 210, 0,   255}, {0, 200, 80, 50}, "events"},
+            {{255, 170, 25,  255}, {0, 250, 80, 50}, "control"},
+            {{90,  180, 210, 255}, {0, 300, 80, 50}, "senses"},
+            {{90,  190, 90,  255}, {0, 350, 80, 50}, "operators"},
+            {{255, 140, 25,  255}, {0, 400, 80, 50}, "variables"}};
 
-
+    vector<BlockInstance> instances;
 
     int logo_w, logo_h;
-    SDL_Texture *logo= IMG_LoadTexture(ren, "logo.png");
+    SDL_Texture *logo = IMG_LoadTexture(ren, "logo.png");
     SDL_QueryTexture(logo, NULL, NULL, &logo_w, &logo_h);
-    SDL_Rect logoSize ={900, -35, 120, 120};
+    SDL_Rect logoSize = {900, -35, 120, 120};
 
     SDL_Rect fileBtn = {10, 8, 60, 30};
-    SDL_Rect fileItemNew  = {10, MENU_H, 120, 28};
+    SDL_Rect fileItemNew = {10, MENU_H, 120, 28};
     SDL_Rect fileItemSave = {10, MENU_H + 28, 120, 28};
     SDL_Rect fileItemLoad = {10, MENU_H + 56, 120, 28};
     bool fileMenuOpen = false;
@@ -218,20 +203,15 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                                                          "Save", ok ? "Saved successfully." : "Save failed!",
                                                          win);
                                 if (ok) instances.clear();
-                            } else if (res == 2) { // No
+                            } else if (res == 2) // No
                                 instances.clear();
-                            } else {
-                                // Cancel -> هیچ کاری نکن
-                            }
-                        } else {
+                        } else
                             // اگر چیزی نیست، مستقیم پاک کن
                             instances.clear();
-                        }
 
                         fileMenuOpen = false;
                         cout << "New clicked" << endl;
                         consumed = true;
-
                     } else if (pointInRect(mx, my, fileItemSave)) {
                         bool ok = saveBlocks(projectPath, instances);
                         cout << "Save clicked: " << (ok ? "OK" : "FAIL") << endl;
@@ -248,14 +228,11 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                                                  win);
                         fileMenuOpen = false;
                         consumed = true;
-                    } else {
+                    } else
                         fileMenuOpen = false;
-                    }
                 }
-
                 if (my < MENU_H) consumed = true;
                 if (consumed) continue;
-
                 bool picked = false;
                 for (int i = (int) instances.size() - 1; i >= 0; --i) {
                     if (pointInRect(mx, my, instances[i].rect)) {
@@ -269,7 +246,6 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         break;
                     }
                 }
-
                 if (!picked) {
                     for (int i = 0; i < (int) blockTypes.size(); ++i) {
                         if (pointInRect(mx, my, blockTypes[i].protoRect)) {
@@ -286,14 +262,7 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         }
                     }
                 }
-                // تشخیص کلیک روی ماریو
-                if (!picked && pointInRect(mx, my, marioRect)) {
-                    isDragging = true;
-                    offsetX = mx - marioRect.x;
-                    offsetY = my - marioRect.y;
-                }
             }
-
             if (e.type == SDL_MOUSEMOTION) {
                 int mx = e.motion.x, my = e.motion.y;
                 if (!instances.empty()) {
@@ -303,24 +272,9 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         b.rect.y = my - b.dragStartY;
                     }
                 }
-                //   حرکت دادن ماریو همزمان با حرکت موس در پنجره جدید
-                if (isDragging) {
-                    marioRect.x = mx - offsetX;
-                    marioRect.y = my - offsetY;
-
-                    // محدود کردن ماریو فقط به مربع بالایی
-                    if (marioRect.x < spriteArea.x) marioRect.x = spriteArea.x;
-                    if (marioRect.x + marioRect.w > WINDOW_WIDTH) marioRect.x = WINDOW_WIDTH - marioRect.w;
-
-                    if (marioRect.y < spriteArea.y) marioRect.y = spriteArea.y;
-                    if (marioRect.y + marioRect.h > spriteArea.y + spriteArea.h)
-                        marioRect.y = (spriteArea.y + spriteArea.h) - marioRect.h;
-                }
             }
 
             if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) {
-                //رها کردن ماریو
-                isDragging = false;
                 if (!instances.empty()) {
                     BlockInstance &b = instances.back();
                     if (b.dragging) {
@@ -342,14 +296,13 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                 }
             }
         }
-//-----------------rendering----------------
+
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
         boxRGBA(ren, 0, 0, WINDOW_WIDTH, MENU_H, 160, 70, 165, 200);
         SDL_RenderCopy(ren, logo, NULL, &logoSize);
-
-        boxRGBA(ren, fileBtn.x, fileBtn.y, fileBtn.x + fileBtn.w, fileBtn.y + fileBtn.h, 120, 50, 130, 255);
+        
         writeLeftText(ren, font, "File", fileBtn, 10);
 
         drawRect(ren, leftPanel, {255, 255, 255, 255});
@@ -357,14 +310,15 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
 
         // رسم بصری دو بخش پنل سمت راست
         drawRect(ren, spriteArea, {240, 244, 255, 255}); // بخش بالایی (محل حرکت)
-        SDL_Rect bottomPart = { 710, 325, 290, 275 };
+        SDL_Rect bottomPart = {710, 325, 290, 275};
         drawRect(ren, bottomPart, {210, 210, 220, 255});
 
         //خطوط جداکننده
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
+
         //خط افقی جدا کننده
-        hlineRGBA(ren, 710, 1000 , 325, 0 , 0 , 0 , 255) ;
+        hlineRGBA(ren, 710, 1000, 325, 0, 0, 0, 255);
 
         for (auto &bt: blockTypes) {
             drawRect(ren, bt.protoRect, bt.color);
@@ -376,20 +330,21 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
             writeCenteredText(ren, font, blockTypes[b.typeIndex].name, b.rect);
         }
 
-
         if (fileMenuOpen) {
-            boxRGBA(ren, fileItemNew.x,  fileItemNew.y,  fileItemNew.x + fileItemNew.w,  fileItemNew.y + fileItemNew.h,  90, 90, 90, 255);
-            boxRGBA(ren, fileItemSave.x, fileItemSave.y, fileItemSave.x + fileItemSave.w, fileItemSave.y + fileItemSave.h, 90, 90, 90, 255);
-            boxRGBA(ren, fileItemLoad.x, fileItemLoad.y, fileItemLoad.x + fileItemLoad.w, fileItemLoad.y + fileItemLoad.h, 90, 90, 90, 255);
+            boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h, 90,
+                    90, 90, 255);
+            boxRGBA(ren, fileItemSave.x, fileItemSave.y, fileItemSave.x + fileItemSave.w,
+                    fileItemSave.y + fileItemSave.h, 90, 90, 90, 255);
+            boxRGBA(ren, fileItemLoad.x, fileItemLoad.y, fileItemLoad.x + fileItemLoad.w,
+                    fileItemLoad.y + fileItemLoad.h, 90, 90, 90, 255);
 
-            writeLeftText(ren, font, "New",  fileItemNew, 10);
+            writeLeftText(ren, font, "New", fileItemNew, 10);
             writeLeftText(ren, font, "Save", fileItemSave, 10);
             writeLeftText(ren, font, "Load", fileItemLoad, 10);
         }
 
-        if (marioTexture != NULL) {
+        if (marioTexture != NULL)
             SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
-        }
 
         SDL_RenderPresent(ren);
         SDL_Delay(16);
@@ -400,7 +355,7 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     SDL_DestroyTexture(logo);
-    SDL_DestroyTexture(marioTexture) ;
+    SDL_DestroyTexture(marioTexture);
     IMG_Quit();
     SDL_Quit();
     return 0;
