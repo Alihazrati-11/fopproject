@@ -1,11 +1,18 @@
-cmake_minimum_required(VERSION 4.0)
-project(project)
+cmake_minimum_required(VERSION 3.23)
+
+project(Project)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(project main.cpp)
+add_executable(Project main.cpp)
 
-target_link_libraries(${PROJECT_NAME} -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer)
+target_link_libraries(Project
+        mingw32
+        SDL2main
+        SDL2
+        SDL2_image
+        SDL2_ttf
+        SDL2_mixer
+)
 
-configure_file(calibrib.ttf calibrib.ttf COPYONLY)
-
+configure_file(calibri.ttf calibri.ttf COPYONLY)
