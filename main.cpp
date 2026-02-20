@@ -20,6 +20,9 @@ SDL_Texture* marioTexture = NULL ;
 // متغیر ذخیره عکس
 SDL_Rect marioRect = {810 , 250 , 90 , 90 } ;
 // موقعیت
+bool isDragging = false ;
+int offsetX = 0;
+int offsetY = 0  ;
 
 void drawRect(SDL_Renderer* ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
@@ -280,6 +283,12 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         }
                     }
                 }
+                // تشخیص کلیک روی ماریو
+                if (!picked && pointInRect(mx, my, marioRect)) {
+                    isDragging = true;
+                    offsetX = mx - marioRect.x;
+                    offsetY = my - marioRect.y;
+                }
             }
 
             if (e.type == SDL_MOUSEMOTION) {
@@ -291,24 +300,36 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         b.rect.y = my - b.dragStartY;
                     }
                 }
+                //  حرکت دادن ماریو همزمان با حرکت موس
+                if (isDragging) {
+                    marioRect.x = mx - offsetX;
+                    marioRect.y = my - offsetY;
+
+                    // محدودیت: ماریو از پنل سمت راست بیرون نرود
+                    if (marioRect.x < 710) marioRect.x = 710;
+                }
             }
 
-            if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT && !instances.empty()) {
-                BlockInstance &b = instances.back();
-                if (b.dragging) {
-                    b.dragging = false;
-                    int cx = b.rect.x + b.rect.w / 2, cy = b.rect.y + b.rect.h / 2;
+            if (e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_LEFT) {
+                //رها کردن ماریو
+                isDragging = false;
+                if (!instances.empty()) {
+                    BlockInstance &b = instances.back();
+                    if (b.dragging) {
+                        b.dragging = false;
+                        int cx = b.rect.x + b.rect.w / 2, cy = b.rect.y + b.rect.h / 2;
 
-                    if (pointInRect(cx, cy, workspace)) {
-                        b.lastValidX = b.rect.x;
-                        b.lastValidY = b.rect.y;
-                    } else if (pointInRect(cx, cy, stagePanel)) {
-                        b.rect.x = b.lastValidX;
-                        b.rect.y = b.lastValidY;
-                        if (!pointInRect(b.rect.x + b.rect.w / 2, b.rect.y + b.rect.h / 2, workspace))
+                        if (pointInRect(cx, cy, workspace)) {
+                            b.lastValidX = b.rect.x;
+                            b.lastValidY = b.rect.y;
+                        } else if (pointInRect(cx, cy, stagePanel)) {
+                            b.rect.x = b.lastValidX;
+                            b.rect.y = b.lastValidY;
+                            if (!pointInRect(b.rect.x + b.rect.w / 2, b.rect.y + b.rect.h / 2, workspace))
+                                instances.pop_back();
+                        } else {
                             instances.pop_back();
-                    } else {
-                        instances.pop_back();
+                        }
                     }
                 }
             }
