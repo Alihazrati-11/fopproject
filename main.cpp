@@ -27,6 +27,14 @@ SDL_Rect marioRect = {810, 100, 90, 90};
 // محلی که شبه بلوک ها ظاهر می شوند
 SDL_Rect subBlockArea = {90, 60, 180, 200};
 
+// دکمه افزودن اکستنشن
+SDL_Rect addExtensionBtn = {0, WINDOW_HEIGHT-40, 120, 40};
+
+// منوی اکستنشن
+bool extensionMenuOpen = false;
+SDL_Rect getBackBtn = {10, 40, 120, 50};
+SDL_Rect penBtn = {300, 50, 200, 200};
+
 void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(ren, &r);
@@ -147,6 +155,16 @@ void createSubBlocks(const BlockType &blockType) {
             sb.typeIndex = 7;
             currentSubBlocks.push_back(sb);
         }
+    } else if (blockType.name == "pen") {
+        string names[5] = {"pen down", "pen up", "set color", "set size", "stamp"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 8; // New index for pen
+            currentSubBlocks.push_back(sb);
+        }
     }
 }
 
@@ -162,9 +180,8 @@ void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string& text, SD
     SDL_DestroyTexture(tex);
 }
 
-void writeLeftText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect, int pad = 8) {
-    SDL_Color white = {255, 255, 255, 255};
-    SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
+void writeLeftText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect, SDL_Color color, int pad) {
+    SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), color);
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
     int tw, th;
     SDL_QueryTexture(tex, NULL, NULL, &tw, &th);
@@ -284,6 +301,7 @@ int main(int argc, char *argv[]) {
     string projectPath = getProjectPath();
     cout << "Project file path: " << projectPath << endl;
 
+    bool penExtensionAdded = false;
     bool running = true;
     while (running) {
         SDL_Event e;
@@ -293,6 +311,32 @@ int main(int argc, char *argv[]) {
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
                 int mx = e.button.x, my = e.button.y;
                 bool consumed = false;
+
+                // بررسی باز کردن منوی اکستنشن
+                if (extensionMenuOpen) {
+                    if (pointInRect(mx, my, getBackBtn)) {
+                        extensionMenuOpen = false;
+                        cout << "Get Back clicked" << endl;
+                        consumed = true;
+                    } else if (pointInRect(mx, my, penBtn)) {
+                        if (!penExtensionAdded) {
+                            // اضافه کردن بلوک مداد
+                            BlockType penBlock = {{70, 220, 115, 255}, {0, 450, 80, 50}, "pen"};
+                            blockTypes.push_back(penBlock);
+                            penExtensionAdded = true;
+                            cout << "Pen extension added" << endl;
+                        }
+                        extensionMenuOpen = false;
+                        consumed = true;
+                    }
+                    if (consumed) continue;
+                }
+
+                if (pointInRect(mx, my, addExtensionBtn)) {
+                    extensionMenuOpen = true;
+                    cout << "Add Extension clicked" << endl;
+                    consumed = true;
+                }
 
                 if (pointInRect(mx, my, fileBtn)) {
                     fileMenuOpen = !fileMenuOpen;
@@ -340,10 +384,10 @@ int main(int argc, char *argv[]) {
                 if (my < MENU_H) consumed = true;
                 if (consumed) continue;
 
-                // Check if clicked on a category block to show its sub-blocks
+                // بررسی کلیک بلوک ها
                 for (const auto &i: blockTypes) {
                     if (pointInRect(mx, my, i.protoRect)) {
-                        // Clear current sub-blocks and show new ones in the same area
+                        // نمایش شبه بلوک ها
                         createSubBlocks(i);
                         consumed = true;
                         break;
@@ -427,10 +471,11 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
+        // رسم بار بنفش بالایی
         boxRGBA(ren, 0, 0, WINDOW_WIDTH, MENU_H, 160, 70, 165, 200);
         SDL_RenderCopy(ren, logo, NULL, &logoSize);
 
-        writeLeftText(ren, font2, "File", fileBtn, 10);
+        writeLeftText(ren, font2, "File", fileBtn, {255, 255, 255, 255}, 10);
 
         drawRect(ren, leftPanel, {255, 255, 255, 255});
         drawRect(ren, workspace, {248, 249, 255, 255});
@@ -466,6 +511,12 @@ int main(int argc, char *argv[]) {
             writeCenteredText(ren, font, text, b.rect);
         }
 
+        // رسم دکمه افزودن اکستنشن
+        boxRGBA(ren, addExtensionBtn.x, addExtensionBtn.y,
+                addExtensionBtn.x + addExtensionBtn.w, addExtensionBtn.y + addExtensionBtn.h,
+                100, 150, 200, 255);
+        writeCenteredText(ren, font, "Add Extension", addExtensionBtn);
+
         if (fileMenuOpen) {
             boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h, 160,
                     70, 165, 255);
@@ -474,12 +525,37 @@ int main(int argc, char *argv[]) {
             boxRGBA(ren, fileItemLoad.x, fileItemLoad.y, fileItemLoad.x + fileItemLoad.w,
                     fileItemLoad.y + fileItemLoad.h, 160, 70, 165, 255);
 
-            writeLeftText(ren, font, "New Project", fileItemNew, 10);
-            writeLeftText(ren, font, "Save Project", fileItemSave, 10);
-            writeLeftText(ren, font, "Load Project", fileItemLoad, 10);
+            writeLeftText(ren, font, "New Project", fileItemNew, {255, 255, 255, 255}, 10);
+            writeLeftText(ren, font, "Save Project", fileItemSave, {255, 255, 255, 255}, 10);
+            writeLeftText(ren, font, "Load Project", fileItemLoad, {255, 255, 255, 255}, 10);
         }
 
         SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
+
+        // رسم منوی اکستنشن اگر باز است
+        if (extensionMenuOpen) {
+            // پس زمینه نیمه شفاف
+            boxRGBA(ren, 0, 0,WINDOW_WIDTH, WINDOW_HEIGHT,255, 255, 255, 255);
+
+            // دکمه بازگشت
+            boxRGBA(ren, getBackBtn.x, getBackBtn.y,
+                    getBackBtn.x + getBackBtn.w, getBackBtn.y + getBackBtn.h,
+                    200, 100, 100, 255);
+            writeCenteredText(ren, font2, "<- Back", getBackBtn);
+
+            // دکمه قلم
+            boxRGBA(ren, penBtn.x, penBtn.y,
+                    penBtn.x + penBtn.w, penBtn.y + penBtn.h,
+                    70, 220, 115, 255);
+            writeCenteredText(ren, font2, "Pen", penBtn);
+
+            // اگر قلم قبلا اضافه شده، پیام نمایش بده
+            if (penExtensionAdded) {
+                SDL_Rect msgRect = {50, 250, 300, 40};
+                TTF_Font *fontError = TTF_OpenFont("calibrib.ttf", 26);
+                writeLeftText(ren, fontError, "Pen already added!", msgRect, {0, 0, 0, 255}, 0);
+            }
+        }
 
         SDL_RenderPresent(ren);
         SDL_Delay(16);
