@@ -16,6 +16,10 @@ SDL_Rect leftPanel  = { 80, 50, 200, 550 };
 SDL_Rect workspace  = { 280, 50, 470, 550 };
 SDL_Rect stagePanel = { 710, 50, 290, 550 };
 
+SDL_Texture* marioTexture = NULL ;
+// متغیر ذخیره عکس
+SDL_Rect marioRect = {810 , 250 , 90 , 90 } ;
+// موقعیت
 int spriteX = 845, spriteY = 315, spriteR = 20;
 
 void drawRect(SDL_Renderer* ren, SDL_Rect r, SDL_Color fill) {
