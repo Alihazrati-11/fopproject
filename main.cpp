@@ -24,6 +24,9 @@ SDL_Texture *marioTexture = NULL;
 // متغیر ذخیره عکس
 SDL_Rect marioRect = {810, 100, 90, 90};
 
+// محلی که شبه بلوک ها ظاهر می شوند
+SDL_Rect subBlockArea = {90, 60, 180, 200};
+
 void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(ren, &r);
@@ -39,15 +42,115 @@ struct BlockType {
     string name;
 };
 
+struct SubBlock {
+    SDL_Color color;
+    SDL_Rect rect;
+    string name;
+    int typeIndex;
+};
+
 struct BlockInstance {
     int typeIndex;
     SDL_Rect rect;
     int lastValidX, lastValidY;
     bool dragging = false;
     int dragStartX = 0, dragStartY = 0;
+    string customName;
 };
 
-void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, string text, SDL_Rect rect) {
+// شبه بلوک های قابل درگ
+vector<BlockInstance> instances;
+vector<SubBlock> currentSubBlocks;
+
+// تابع ساخت شبه بلوک ها
+void createSubBlocks(const BlockType &blockType) {
+    currentSubBlocks.clear();
+    int startX = subBlockArea.x + 10, startY = subBlockArea.y + 10;
+
+    if (blockType.name == "motion") {
+        string names[5] = {"move 10", "turn 15", "go to", "glide", "change x"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 0;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "looks") {
+        string names[5] = {"say", "think", "show", "hide", "change size"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 1;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "sound") {
+        string names[5] = {"play", "stop", "change vol", "set vol", "drum"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 2;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "events") {
+        string names[5] = {"when flag", "when key", "when click", "broadcast", "when loud"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 3;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "control") {
+        string names[5] = {"wait", "repeat", "forever", "if then", "if else"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 4;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "senses") {
+        string names[5] = {"touching", "distance", "ask", "key pressed", "mouse down"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 5;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "operators") {
+        string names[5] = {"add", "subtract", "multiply", "divide", "random"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 6;
+            currentSubBlocks.push_back(sb);
+        }
+    } else if (blockType.name == "variables") {
+        string names[5] = {"set var", "change var", "show var", "hide var", "var"};
+        for (int i = 0; i < 5; i++) {
+            SubBlock sb;
+            sb.color = blockType.color;
+            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.name = names[i];
+            sb.typeIndex = 7;
+            currentSubBlocks.push_back(sb);
+        }
+    }
+}
+
+void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect) {
     SDL_Color white = {255, 255, 255, 255};
     SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
@@ -59,7 +162,7 @@ void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, string text, SDL_Rect 
     SDL_DestroyTexture(tex);
 }
 
-void writeLeftText(SDL_Renderer *ren, TTF_Font *font, string text, SDL_Rect rect, int pad = 8) {
+void writeLeftText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect, int pad = 8) {
     SDL_Color white = {255, 255, 255, 255};
     SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
@@ -89,7 +192,8 @@ bool saveBlocks(const string &path, const vector<BlockInstance> &instances) {
     for (auto &b: instances) {
         out << b.typeIndex << " "
             << b.rect.x << " " << b.rect.y << " "
-            << b.rect.w << " " << b.rect.h << "\n";
+            << b.rect.w << " " << b.rect.h << " "
+            << b.customName << "\n";
     }
     return true;
 }
@@ -103,6 +207,8 @@ bool loadBlocks(const string &path, vector<BlockInstance> &instances) {
     for (size_t i = 0; i < n; ++i) {
         BlockInstance b;
         in >> b.typeIndex >> b.rect.x >> b.rect.y >> b.rect.w >> b.rect.h;
+        in.ignore();
+        getline(in, b.customName);
         b.lastValidX = b.rect.x;
         b.lastValidY = b.rect.y;
         b.dragging = false;
@@ -119,12 +225,12 @@ int confirmSaveBeforeNew(SDL_Window *win) {
             {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel"}
     };
     const SDL_MessageBoxColorScheme colorScheme = {{
-                                                           {255, 255, 255}, // background
-                                                           {0, 0, 0}, // text
-                                                           {100, 100, 100}, // button border
-                                                           {220, 220, 220}, // button background
-                                                           {0, 0, 0}  // button selected
-                                                   }};
+        {255, 255, 255}, // background
+        {0, 0, 0}, // text
+        {100, 100, 100}, // button border
+        {220, 220, 220}, // button background
+        {0, 0, 0}  // button selected
+    }};
     SDL_MessageBoxData data = {};
     data.flags = SDL_MESSAGEBOX_INFORMATION;
     data.window = win;
@@ -146,7 +252,9 @@ int main(int argc, char *argv[]) {
             "main window", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
             WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
     SDL_Renderer *ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    TTF_Font *font = TTF_OpenFont("calibrib.ttf", 18);
+    TTF_Font *font = TTF_OpenFont("calibrib.ttf", 14);
+    TTF_Font *font2 = TTF_OpenFont("calibrib.ttf", 22);
+    TTF_Font *font3 = TTF_OpenFont("calibrib.ttf", 17);
 
 //بارگذاری قارچ اسپرایت
     marioTexture = IMG_LoadTexture(ren, "mario.png");
@@ -161,8 +269,6 @@ int main(int argc, char *argv[]) {
             {{90,  180, 210, 255}, {0, 300, 80, 50}, "senses"},
             {{90,  190, 90,  255}, {0, 350, 80, 50}, "operators"},
             {{255, 140, 25,  255}, {0, 400, 80, 50}, "variables"}};
-
-    vector<BlockInstance> instances;
 
     int logo_w, logo_h;
     SDL_Texture *logo = IMG_LoadTexture(ren, "logo.png");
@@ -233,6 +339,42 @@ int main(int argc, char *argv[]) {
                 }
                 if (my < MENU_H) consumed = true;
                 if (consumed) continue;
+
+                // Check if clicked on a category block to show its sub-blocks
+                for (const auto &i: blockTypes) {
+                    if (pointInRect(mx, my, i.protoRect)) {
+                        // Clear current sub-blocks and show new ones in the same area
+                        createSubBlocks(i);
+                        consumed = true;
+                        break;
+                    }
+                }
+
+                if (consumed) continue;
+
+                // چک کلیک کردن روی بلوک های چپ
+                bool subBlockClicked = false;
+                for (const auto &i: currentSubBlocks) {
+                    if (pointInRect(mx, my, i.rect)) {
+                        // ساخت شبه بلوک جدید قابل درگ
+                        BlockInstance b;
+                        b.typeIndex = i.typeIndex;
+                        b.rect = i.rect;
+                        b.dragging = true;
+                        b.dragStartX = mx - b.rect.x;
+                        b.dragStartY = my - b.rect.y;
+                        b.lastValidX = b.rect.x;
+                        b.lastValidY = b.rect.y;
+                        b.customName = i.name;
+                        instances.push_back(b);
+                        subBlockClicked = true;
+                        break;
+                    }
+                }
+
+                if (subBlockClicked) continue;
+
+                // چک کلیک کردن روی شبه بلوک موجود در پنل کاری
                 bool picked = false;
                 for (int i = (int) instances.size() - 1; i >= 0; --i) {
                     if (pointInRect(mx, my, instances[i].rect)) {
@@ -246,23 +388,8 @@ int main(int argc, char *argv[]) {
                         break;
                     }
                 }
-                if (!picked) {
-                    for (int i = 0; i < (int) blockTypes.size(); ++i) {
-                        if (pointInRect(mx, my, blockTypes[i].protoRect)) {
-                            BlockInstance b;
-                            b.typeIndex = i;
-                            b.rect = blockTypes[i].protoRect;
-                            b.dragging = true;
-                            b.dragStartX = mx - b.rect.x;
-                            b.dragStartY = my - b.rect.y;
-                            b.lastValidX = b.rect.x;
-                            b.lastValidY = b.rect.y;
-                            instances.push_back(b);
-                            break;
-                        }
-                    }
-                }
             }
+
             if (e.type == SDL_MOUSEMOTION) {
                 int mx = e.motion.x, my = e.motion.y;
                 if (!instances.empty()) {
@@ -302,8 +429,8 @@ int main(int argc, char *argv[]) {
 
         boxRGBA(ren, 0, 0, WINDOW_WIDTH, MENU_H, 160, 70, 165, 200);
         SDL_RenderCopy(ren, logo, NULL, &logoSize);
-        
-        writeLeftText(ren, font, "File", fileBtn, 10);
+
+        writeLeftText(ren, font2, "File", fileBtn, 10);
 
         drawRect(ren, leftPanel, {255, 255, 255, 255});
         drawRect(ren, workspace, {248, 249, 255, 255});
@@ -316,35 +443,43 @@ int main(int argc, char *argv[]) {
         //خطوط جداکننده
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
-
         //خط افقی جدا کننده
         hlineRGBA(ren, 710, 1000, 325, 0, 0, 0, 255);
 
+        // رسم بلوک ها
         for (auto &bt: blockTypes) {
             drawRect(ren, bt.protoRect, bt.color);
-            writeCenteredText(ren, font, bt.name, bt.protoRect);
+            writeCenteredText(ren, font3, bt.name, bt.protoRect);
         }
 
+        // رسم شبه بلوک ها
+        for (auto &sb: currentSubBlocks) {
+            drawRect(ren, sb.rect, sb.color);
+            string text = sb.name;
+            writeCenteredText(ren, font, text, sb.rect);
+        }
+
+        // رسم شبه بلوک های قابل درگ
         for (auto &b: instances) {
             drawRect(ren, b.rect, blockTypes[b.typeIndex].color);
-            writeCenteredText(ren, font, blockTypes[b.typeIndex].name, b.rect);
+            string text = b.customName;
+            writeCenteredText(ren, font, text, b.rect);
         }
 
         if (fileMenuOpen) {
-            boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h, 90,
-                    90, 90, 255);
+            boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h, 160,
+                    70, 165, 255);
             boxRGBA(ren, fileItemSave.x, fileItemSave.y, fileItemSave.x + fileItemSave.w,
-                    fileItemSave.y + fileItemSave.h, 90, 90, 90, 255);
+                    fileItemSave.y + fileItemSave.h, 160, 70, 165, 255);
             boxRGBA(ren, fileItemLoad.x, fileItemLoad.y, fileItemLoad.x + fileItemLoad.w,
-                    fileItemLoad.y + fileItemLoad.h, 90, 90, 90, 255);
+                    fileItemLoad.y + fileItemLoad.h, 160, 70, 165, 255);
 
-            writeLeftText(ren, font, "New", fileItemNew, 10);
-            writeLeftText(ren, font, "Save", fileItemSave, 10);
-            writeLeftText(ren, font, "Load", fileItemLoad, 10);
+            writeLeftText(ren, font, "New Project", fileItemNew, 10);
+            writeLeftText(ren, font, "Save Project", fileItemSave, 10);
+            writeLeftText(ren, font, "Load Project", fileItemLoad, 10);
         }
 
-        if (marioTexture != NULL)
-            SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
+        SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
 
         SDL_RenderPresent(ren);
         SDL_Delay(16);
