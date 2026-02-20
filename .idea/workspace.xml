@@ -28,7 +28,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="tanzim jay logo and add mario sprite">
+    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="drag and drop for mario in right pannel">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
     </list>
@@ -64,6 +64,9 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="mock://C:/Users/parsa/CLionProjects/scrach/main.cpp" root0="SKIP_HIGHLIGHTING" />
     <setting file="mock://C:/Users/parsa/CLionProjects/scrach/main.cpp" root0="SKIP_HIGHLIGHTING" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectApplicationVersion">
     <option name="ide" value="CLion" />
@@ -273,7 +276,8 @@
       <workItem from="1771585329100" duration="3318000" />
       <workItem from="1771588776214" duration="60000" />
       <workItem from="1771589075702" duration="722000" />
-      <workItem from="1771592258719" duration="1862000" />
+      <workItem from="1771592258719" duration="1999000" />
+      <workItem from="1771595934851" duration="901000" />
     </task>
     <task id="LOCAL‎−۰۰۰۰۱" summary="optian load only visual">
       <option name="closed" value="true" />
@@ -318,7 +322,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771588578488</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="drag and drop for mario in right pannel">
+      <option name="closed" value="true" />
+      <created>1771594224700</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1771594224700</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -345,6 +357,7 @@
     <MESSAGE value="optian load and save" />
     <MESSAGE value="option load and save" />
     <MESSAGE value="tanzim jay logo and add mario sprite" />
-    <option name="LAST_COMMIT_MESSAGE" value="tanzim jay logo and add mario sprite" />
+    <MESSAGE value="drag and drop for mario in right pannel" />
+    <option name="LAST_COMMIT_MESSAGE" value="drag and drop for mario in right pannel" />
   </component>
 </project>

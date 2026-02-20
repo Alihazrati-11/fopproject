@@ -16,9 +16,12 @@ SDL_Rect leftPanel  = { 80, 50, 200, 550 };
 SDL_Rect workspace  = { 280, 50, 470, 550 };
 SDL_Rect stagePanel = { 710, 50, 290, 550 };
 
+//تعریف محدوده مربع بالایی برای ماریو
+SDL_Rect spriteArea = { 710, 50, 290, 275 };
+
 SDL_Texture* marioTexture = NULL ;
 // متغیر ذخیره عکس
-SDL_Rect marioRect = {810 , 250 , 90 , 90 } ;
+SDL_Rect marioRect = {810 , 100 , 90 , 90 } ;
 // موقعیت
 bool isDragging = false ;
 int offsetX = 0;
@@ -300,13 +303,18 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                         b.rect.y = my - b.dragStartY;
                     }
                 }
-                //  حرکت دادن ماریو همزمان با حرکت موس
+                //   حرکت دادن ماریو همزمان با حرکت موس در پنجره جدید
                 if (isDragging) {
                     marioRect.x = mx - offsetX;
                     marioRect.y = my - offsetY;
 
-                    // محدودیت: ماریو از پنل سمت راست بیرون نرود
-                    if (marioRect.x < 710) marioRect.x = 710;
+                    // محدود کردن ماریو فقط به مربع بالایی
+                    if (marioRect.x < spriteArea.x) marioRect.x = spriteArea.x;
+                    if (marioRect.x + marioRect.w > WINDOW_WIDTH) marioRect.x = WINDOW_WIDTH - marioRect.w;
+
+                    if (marioRect.y < spriteArea.y) marioRect.y = spriteArea.y;
+                    if (marioRect.y + marioRect.h > spriteArea.y + spriteArea.h)
+                        marioRect.y = (spriteArea.y + spriteArea.h) - marioRect.h;
                 }
             }
 
@@ -334,7 +342,7 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
                 }
             }
         }
-
+//-----------------rendering----------------
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
@@ -346,9 +354,17 @@ marioTexture = IMG_LoadTexture(ren, "mario.png") ;
 
         drawRect(ren, leftPanel, {255, 255, 255, 255});
         drawRect(ren, workspace, {248, 249, 255, 255});
-        drawRect(ren, stagePanel, {240, 244, 255, 255});
+
+        // رسم بصری دو بخش پنل سمت راست
+        drawRect(ren, spriteArea, {240, 244, 255, 255}); // بخش بالایی (محل حرکت)
+        SDL_Rect bottomPart = { 710, 325, 290, 275 };
+        drawRect(ren, bottomPart, {210, 210, 220, 255});
+
+        //خطوط جداکننده
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
+        //خط افقی جدا کننده
+        hlineRGBA(ren, 710, 1000 , 325, 0 , 0 , 0 , 255) ;
 
         for (auto &bt: blockTypes) {
             drawRect(ren, bt.protoRect, bt.color);
