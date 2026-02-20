@@ -15,4 +15,4 @@ target_link_libraries(Project
         SDL2_mixer
 )
 
-configure_file(calibri.ttf calibri.ttf COPYONLY)
+configure_file(calibrib.ttf calibrib.ttf COPYONLY)

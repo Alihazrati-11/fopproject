@@ -20,23 +20,12 @@ SDL_Texture* marioTexture = NULL ;
 // متغیر ذخیره عکس
 SDL_Rect marioRect = {810 , 250 , 90 , 90 } ;
 // موقعیت
-int spriteX = 845, spriteY = 315, spriteR = 20;
 
 void drawRect(SDL_Renderer* ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(ren, &r);
 }
 
-void drawCircle(SDL_Renderer* ren, int cx, int cy, int r, SDL_Color color) {
-    SDL_SetRenderDrawColor(ren, color.r, color.g, color.b, color.a);
-    for (int y = -r; y <= r; ++y) {
-        for (int x = -r; x <= r; ++x) {
-            if (x*x + y*y <= r*r) {
-                SDL_RenderDrawPoint(ren, cx + x, cy + y);
-            }
-        }
-    }
-}
 
 bool pointInRect(int x, int y, const SDL_Rect& r) {
     return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
@@ -166,7 +155,9 @@ int main(int argc, char* argv[]) {
     );
     SDL_Renderer* ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     TTF_Font* font = TTF_OpenFont("calibrib.ttf", 18);
-
+//بارگذاری قارچ اسپرایت
+marioTexture = IMG_LoadTexture(ren, "mario.png") ;
+    SDL_SetTextureBlendMode(marioTexture ,SDL_BLENDMODE_BLEND) ;
     vector <BlockType> blockTypes = {
         { {  70,150,255,255}, { 0,  50, 80, 50 } , "motion"},
         { { 150,100,255,255}, { 0, 100, 80, 50 } , "looks"},
@@ -185,7 +176,7 @@ int main(int argc, char* argv[]) {
     int logo_w, logo_h;
     SDL_Texture *logo= IMG_LoadTexture(ren, "logo.png");
     SDL_QueryTexture(logo, NULL, NULL, &logo_w, &logo_h);
-    SDL_Rect logoSize ={-20, -35, 120, 120};
+    SDL_Rect logoSize ={900, -35, 120, 120};
 
     SDL_Rect fileBtn = {10, 8, 60, 30};
     SDL_Rect fileItemNew  = {10, MENU_H, 120, 28};
@@ -260,7 +251,7 @@ int main(int argc, char* argv[]) {
                 if (consumed) continue;
 
                 bool picked = false;
-                for (int i = (int)instances.size() - 1; i >= 0; --i) {
+                for (int i = (int) instances.size() - 1; i >= 0; --i) {
                     if (pointInRect(mx, my, instances[i].rect)) {
                         instances[i].dragging = true;
                         instances[i].dragStartX = mx - instances[i].rect.x;
@@ -274,7 +265,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 if (!picked) {
-                    for (int i = 0; i < (int)blockTypes.size(); ++i) {
+                    for (int i = 0; i < (int) blockTypes.size(); ++i) {
                         if (pointInRect(mx, my, blockTypes[i].protoRect)) {
                             BlockInstance b;
                             b.typeIndex = i;
@@ -294,7 +285,7 @@ int main(int argc, char* argv[]) {
             if (e.type == SDL_MOUSEMOTION) {
                 int mx = e.motion.x, my = e.motion.y;
                 if (!instances.empty()) {
-                    BlockInstance& b = instances.back();
+                    BlockInstance &b = instances.back();
                     if (b.dragging) {
                         b.rect.x = mx - b.dragStartX;
                         b.rect.y = my - b.dragStartY;
@@ -314,7 +305,7 @@ int main(int argc, char* argv[]) {
                     } else if (pointInRect(cx, cy, stagePanel)) {
                         b.rect.x = b.lastValidX;
                         b.rect.y = b.lastValidY;
-                        if (!pointInRect(b.rect.x + b.rect.w/2, b.rect.y + b.rect.h/2, workspace))
+                        if (!pointInRect(b.rect.x + b.rect.w / 2, b.rect.y + b.rect.h / 2, workspace))
                             instances.pop_back();
                     } else {
                         instances.pop_back();
@@ -332,23 +323,22 @@ int main(int argc, char* argv[]) {
         boxRGBA(ren, fileBtn.x, fileBtn.y, fileBtn.x + fileBtn.w, fileBtn.y + fileBtn.h, 120, 50, 130, 255);
         writeLeftText(ren, font, "File", fileBtn, 10);
 
-        drawRect(ren, leftPanel,  {255,255,255,255});
-        drawRect(ren, workspace,  {248,249,255,255});
-        drawRect(ren, stagePanel, {240,244,255,255});
+        drawRect(ren, leftPanel, {255, 255, 255, 255});
+        drawRect(ren, workspace, {248, 249, 255, 255});
+        drawRect(ren, stagePanel, {240, 244, 255, 255});
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
 
-        for (auto& bt : blockTypes){
+        for (auto &bt: blockTypes) {
             drawRect(ren, bt.protoRect, bt.color);
             writeCenteredText(ren, font, bt.name, bt.protoRect);
         }
 
-        for (auto& b : instances) {
+        for (auto &b: instances) {
             drawRect(ren, b.rect, blockTypes[b.typeIndex].color);
             writeCenteredText(ren, font, blockTypes[b.typeIndex].name, b.rect);
         }
 
-        drawCircle(ren, spriteX, spriteY, spriteR, {255,159,28,255});
 
         if (fileMenuOpen) {
             boxRGBA(ren, fileItemNew.x,  fileItemNew.y,  fileItemNew.x + fileItemNew.w,  fileItemNew.y + fileItemNew.h,  90, 90, 90, 255);
@@ -360,6 +350,10 @@ int main(int argc, char* argv[]) {
             writeLeftText(ren, font, "Load", fileItemLoad, 10);
         }
 
+        if (marioTexture != NULL) {
+            SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
+        }
+
         SDL_RenderPresent(ren);
         SDL_Delay(16);
     }
@@ -369,6 +363,7 @@ int main(int argc, char* argv[]) {
     SDL_DestroyRenderer(ren);
     SDL_DestroyWindow(win);
     SDL_DestroyTexture(logo);
+    SDL_DestroyTexture(marioTexture) ;
     IMG_Quit();
     SDL_Quit();
     return 0;
