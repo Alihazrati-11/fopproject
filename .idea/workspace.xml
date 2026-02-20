@@ -28,14 +28,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/scrach.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Project/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Project/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Project/CMakeLists.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Project/main.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/Project/main.cpp" afterDir="false" />
-    </list>
+    <list default="true" id="76f13994-ab95-4e17-8d84-67a533753009" name="Changes" comment="optian load and save" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -46,6 +39,11 @@
   </component>
   <component name="ExecutionTargetManager" SELECTED_TARGET="CMakeBuildProfile:Debug" />
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -251,8 +249,23 @@
       <option name="presentableId" value="Default" />
       <updated>1771572447741</updated>
       <workItem from="1771572451587" duration="671000" />
-      <workItem from="1771573134146" duration="1303000" />
+      <workItem from="1771573134146" duration="3679000" />
     </task>
+    <task id="LOCAL‎−۰۰۰۰۱" summary="optian load only visual">
+      <option name="closed" value="true" />
+      <created>1771574472057</created>
+      <option name="number" value="LOCAL‎−۰۰۰۰۱" />
+      <option name="presentableId" value="LOCAL‎−۰۰۰۰۱" />
+      <updated>1771574472057</updated>
+    </task>
+    <task id="LOCAL‎−۰۰۰۰۲" summary="optian load and save">
+      <option name="closed" value="true" />
+      <created>1771576387532</created>
+      <option name="number" value="LOCAL‎−۰۰۰۰۲" />
+      <option name="presentableId" value="LOCAL‎−۰۰۰۰۲" />
+      <updated>1771576387532</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,5 +286,10 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="optian load only visual" />
+    <MESSAGE value="optian load and save" />
+    <option name="LAST_COMMIT_MESSAGE" value="optian load and save" />
   </component>
 </project>
