@@ -176,9 +176,11 @@ int main(int argc, char* argv[]) {
         { {  90,180,210,255}, { 0, 300, 80, 50 } , "senses"},
         { {  90,190, 90,255}, { 0, 350, 80, 50 } , "operators"},
         { { 255,140, 25,255}, { 0, 400, 80, 50 } , "variables"}
-    };
+    } ;
 
     vector <BlockInstance> instances;
+
+
 
     int logo_w, logo_h;
     SDL_Texture *logo= IMG_LoadTexture(ren, "logo.png");
