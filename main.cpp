@@ -11,7 +11,20 @@ using namespace std;
 
 const int WINDOW_WIDTH = 1000, WINDOW_HEIGHT = 600;
 const int MENU_H = 48;
+struct SpriteData {
+    string name = "Mario";
+    string xStr = "810", yStr = "100", sizeStr = "100", angleStr = "90";
+    int x = 810, y = 100, size = 100, angle = 90;
+} marioData;
 
+// مشخص کردن اینکه کدام فیلد در حال ویرایش است (0: هیچکدام، 1: X، 2: Y، 3: Size، 4: Angle)
+int activeField = 0;
+
+// فیلدهای مستطیلی برای کلیک کاربر
+SDL_Rect xInputRect = {760, 350, 60, 25};
+SDL_Rect yInputRect = {860, 350, 60, 25};
+SDL_Rect sizeInputRect = {760, 390, 60, 25};
+SDL_Rect angleInputRect = {860, 390, 60, 25};
 // ناحیه‌ها
 SDL_Rect leftPanel = {80, 50, 200, 550};
 SDL_Rect workspace = {280, 50, 470, 550};
@@ -35,6 +48,21 @@ bool extensionMenuOpen = false;
 SDL_Rect getBackBtn = {10, 40, 120, 50};
 SDL_Rect penBtn = {300, 50, 200, 200};
 
+void updateMarioFromInputs() {
+    try {
+        if (!marioData.xStr.empty()) marioData.x = stoi(marioData.xStr);
+        if (!marioData.yStr.empty()) marioData.y = stoi(marioData.yStr);
+        if (!marioData.sizeStr.empty()) marioData.size = stoi(marioData.sizeStr);
+        if (!marioData.angleStr.empty()) marioData.angle = stoi(marioData.angleStr);
+
+        marioRect.x = marioData.x;
+        marioRect.y = marioData.y;
+        float scale = marioData.size / 100.0f;
+        marioRect.w = 90 * scale;
+        marioRect.h = 90 * scale;
+    } catch (...) {}
+}
+
 void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
     SDL_SetRenderDrawColor(ren, fill.r, fill.g, fill.b, fill.a);
     SDL_RenderFillRect(ren, &r);
@@ -43,6 +71,7 @@ void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
 bool pointInRect(int x, int y, const SDL_Rect &r) {
     return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
+
 
 struct BlockType {
     SDL_Color color;
@@ -308,9 +337,32 @@ int main(int argc, char *argv[]) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) running = false;
 
+            //  مدیریت تایپ اعداد در فیلدها
+            if (e.type == SDL_TEXTINPUT && activeField > 0) {
+                if (activeField == 1) marioData.xStr += e.text.text;
+                else if (activeField == 2) marioData.yStr += e.text.text;
+                else if (activeField == 3) marioData.sizeStr += e.text.text;
+                else if (activeField == 4) marioData.angleStr += e.text.text;
+                updateMarioFromInputs();
+            }
+            if (e.type == SDL_KEYDOWN && activeField > 0) {
+                if (e.key.keysym.sym == SDLK_BACKSPACE) {
+                    string* s = (activeField==1)? &marioData.xStr : (activeField==2)? &marioData.yStr : (activeField==3)? &marioData.sizeStr : &marioData.angleStr;
+                    if (!s->empty()) { s->pop_back(); updateMarioFromInputs(); }
+                }
+                if (e.key.keysym.sym == SDLK_RETURN) { activeField = 0; SDL_StopTextInput(); }
+            }
+
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
                 int mx = e.button.x, my = e.button.y;
                 bool consumed = false;
+
+                // چک کردن کلیک روی فیلدهای ورودی
+                if (pointInRect(mx, my, xInputRect)) { activeField = 1; SDL_StartTextInput(); }
+                else if (pointInRect(mx, my, yInputRect)) { activeField = 2; SDL_StartTextInput(); }
+                else if (pointInRect(mx, my, sizeInputRect)) { activeField = 3; SDL_StartTextInput(); }
+                else if (pointInRect(mx, my, angleInputRect)) { activeField = 4; SDL_StartTextInput(); }
+                else { activeField = 0; SDL_StopTextInput(); }
 
                 // بررسی باز کردن منوی اکستنشن
                 if (extensionMenuOpen) {
@@ -485,6 +537,25 @@ int main(int argc, char *argv[]) {
         SDL_Rect bottomPart = {710, 325, 290, 275};
         drawRect(ren, bottomPart, {210, 210, 220, 255});
 
+        // --- NEW: رسم پنل پایینی و فیلدها ---
+
+        // فیلد X و Y
+        writeLeftText(ren, font, "X:", {720, 350, 30, 25}, {0,0,0,255}, 0);
+        drawRect(ren, xInputRect, (activeField == 1) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
+        writeLeftText(ren, font, marioData.xStr, xInputRect, {0,0,0,255}, 5);
+
+        writeLeftText(ren, font, "Y:", {820, 350, 30, 25}, {0,0,0,255}, 0);
+        drawRect(ren, yInputRect, (activeField == 2) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
+        writeLeftText(ren, font, marioData.yStr, yInputRect, {0,0,0,255}, 5);
+
+        // فیلد Size و Direction
+        writeLeftText(ren, font, "Size:", {715, 390, 45, 25}, {0,0,0,255}, 0);
+        drawRect(ren, sizeInputRect, (activeField == 3) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
+        writeLeftText(ren, font, marioData.sizeStr, sizeInputRect, {0,0,0,255}, 5);
+
+        writeLeftText(ren, font, "Dir:", {820, 390, 40, 25}, {0,0,0,255}, 0);
+        drawRect(ren, angleInputRect, (activeField == 4) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
+        writeLeftText(ren, font, marioData.angleStr, angleInputRect, {0,0,0,255}, 5);
         //خطوط جداکننده
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
@@ -529,8 +600,11 @@ int main(int argc, char *argv[]) {
             writeLeftText(ren, font, "Save Project", fileItemSave, {255, 255, 255, 255}, 10);
             writeLeftText(ren, font, "Load Project", fileItemLoad, {255, 255, 255, 255}, 10);
         }
-
-        SDL_RenderCopy(ren, marioTexture, NULL, &marioRect);
+        if (marioTexture) {
+            SDL_Point center = { marioRect.w / 2, marioRect.h / 2 };
+            double finalAngle = (double)marioData.angle - 90.0;
+            SDL_RenderCopyEx(ren, marioTexture, NULL, &marioRect, finalAngle, &center, SDL_FLIP_NONE);
+        }
 
         // رسم منوی اکستنشن اگر باز است
         if (extensionMenuOpen) {
