@@ -41,7 +41,7 @@ SDL_Rect marioRect = {810, 100, 90, 90};
 SDL_Rect subBlockArea = {90, 60, 180, 200};
 
 // دکمه افزودن اکستنشن
-SDL_Rect addExtensionBtn = {0, WINDOW_HEIGHT-40, 120, 40};
+SDL_Rect addExtensionBtn = {0, WINDOW_HEIGHT - 40, 120, 40};
 
 // منوی اکستنشن
 bool extensionMenuOpen = false;
@@ -197,7 +197,7 @@ void createSubBlocks(const BlockType &blockType) {
     }
 }
 
-void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect) {
+void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string &text, SDL_Rect rect) {
     SDL_Color white = {255, 255, 255, 255};
     SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), white);
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
@@ -209,7 +209,7 @@ void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string& text, SD
     SDL_DestroyTexture(tex);
 }
 
-void writeLeftText(SDL_Renderer *ren, TTF_Font *font, const string& text, SDL_Rect rect, SDL_Color color, int pad) {
+void writeLeftText(SDL_Renderer *ren, TTF_Font *font, const string &text, SDL_Rect rect, SDL_Color color, int pad) {
     SDL_Surface *surf = TTF_RenderText_Blended(font, text.c_str(), color);
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, surf);
     int tw, th;
@@ -271,12 +271,12 @@ int confirmSaveBeforeNew(SDL_Window *win) {
             {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel"}
     };
     const SDL_MessageBoxColorScheme colorScheme = {{
-        {255, 255, 255}, // background
-        {0, 0, 0}, // text
-        {100, 100, 100}, // button border
-        {220, 220, 220}, // button background
-        {0, 0, 0}  // button selected
-    }};
+                                                           {255, 255, 255}, // background
+                                                           {0, 0, 0}, // text
+                                                           {100, 100, 100}, // button border
+                                                           {220, 220, 220}, // button background
+                                                           {0, 0, 0}  // button selected
+                                                   }};
     SDL_MessageBoxData data = {};
     data.flags = SDL_MESSAGEBOX_INFORMATION;
     data.window = win;
@@ -347,10 +347,19 @@ int main(int argc, char *argv[]) {
             }
             if (e.type == SDL_KEYDOWN && activeField > 0) {
                 if (e.key.keysym.sym == SDLK_BACKSPACE) {
-                    string* s = (activeField==1)? &marioData.xStr : (activeField==2)? &marioData.yStr : (activeField==3)? &marioData.sizeStr : &marioData.angleStr;
-                    if (!s->empty()) { s->pop_back(); updateMarioFromInputs(); }
+                    string *s = (activeField == 1) ? &marioData.xStr : (activeField == 2) ? &marioData.yStr
+                                                                                          : (activeField == 3)
+                                                                                            ? &marioData.sizeStr
+                                                                                            : &marioData.angleStr;
+                    if (!s->empty()) {
+                        s->pop_back();
+                        updateMarioFromInputs();
+                    }
                 }
-                if (e.key.keysym.sym == SDLK_RETURN) { activeField = 0; SDL_StopTextInput(); }
+                if (e.key.keysym.sym == SDLK_RETURN) {
+                    activeField = 0;
+                    SDL_StopTextInput();
+                }
             }
 
             if (e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_LEFT) {
@@ -358,11 +367,26 @@ int main(int argc, char *argv[]) {
                 bool consumed = false;
 
                 // چک کردن کلیک روی فیلدهای ورودی
-                if (pointInRect(mx, my, xInputRect)) { activeField = 1; SDL_StartTextInput(); }
-                else if (pointInRect(mx, my, yInputRect)) { activeField = 2; SDL_StartTextInput(); }
-                else if (pointInRect(mx, my, sizeInputRect)) { activeField = 3; SDL_StartTextInput(); }
-                else if (pointInRect(mx, my, angleInputRect)) { activeField = 4; SDL_StartTextInput(); }
-                else { activeField = 0; SDL_StopTextInput(); }
+                if (pointInRect(mx, my, xInputRect)) {
+                    activeField = 1;
+                    SDL_StartTextInput();
+                }
+                else if (pointInRect(mx, my, yInputRect)) {
+                    activeField = 2;
+                    SDL_StartTextInput();
+                }
+                else if (pointInRect(mx, my, sizeInputRect)) {
+                    activeField = 3;
+                    SDL_StartTextInput();
+                }
+                else if (pointInRect(mx, my, angleInputRect)) {
+                    activeField = 4;
+                    SDL_StartTextInput();
+                }
+                else {
+                    activeField = 0;
+                    SDL_StopTextInput();
+                }
 
                 // بررسی باز کردن منوی اکستنشن
                 if (extensionMenuOpen) {
@@ -540,22 +564,24 @@ int main(int argc, char *argv[]) {
         // --- NEW: رسم پنل پایینی و فیلدها ---
 
         // فیلد X و Y
-        writeLeftText(ren, font, "X:", {720, 350, 30, 25}, {0,0,0,255}, 0);
-        drawRect(ren, xInputRect, (activeField == 1) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
-        writeLeftText(ren, font, marioData.xStr, xInputRect, {0,0,0,255}, 5);
+        writeLeftText(ren, font, "X:", {720, 350, 30, 25}, {0, 0, 0, 255}, 0);
+        drawRect(ren, xInputRect, (activeField == 1) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
+        writeLeftText(ren, font, marioData.xStr, xInputRect, {0, 0, 0, 255}, 5);
 
-        writeLeftText(ren, font, "Y:", {820, 350, 30, 25}, {0,0,0,255}, 0);
-        drawRect(ren, yInputRect, (activeField == 2) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
-        writeLeftText(ren, font, marioData.yStr, yInputRect, {0,0,0,255}, 5);
+        writeLeftText(ren, font, "Y:", {820, 350, 30, 25}, {0, 0, 0, 255}, 0);
+        drawRect(ren, yInputRect, (activeField == 2) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
+        writeLeftText(ren, font, marioData.yStr, yInputRect, {0, 0, 0, 255}, 5);
 
         // فیلد Size و Direction
-        writeLeftText(ren, font, "Size:", {715, 390, 45, 25}, {0,0,0,255}, 0);
-        drawRect(ren, sizeInputRect, (activeField == 3) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
-        writeLeftText(ren, font, marioData.sizeStr, sizeInputRect, {0,0,0,255}, 5);
+        writeLeftText(ren, font, "Size:", {715, 390, 45, 25}, {0, 0, 0, 255}, 0);
+        drawRect(ren, sizeInputRect,
+                 (activeField == 3) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
+        writeLeftText(ren, font, marioData.sizeStr, sizeInputRect, {0, 0, 0, 255}, 5);
 
-        writeLeftText(ren, font, "Dir:", {820, 390, 40, 25}, {0,0,0,255}, 0);
-        drawRect(ren, angleInputRect, (activeField == 4) ? SDL_Color{255,255,200,255} : SDL_Color{255,255,255,255});
-        writeLeftText(ren, font, marioData.angleStr, angleInputRect, {0,0,0,255}, 5);
+        writeLeftText(ren, font, "Dir:", {820, 390, 40, 25}, {0, 0, 0, 255}, 0);
+        drawRect(ren, angleInputRect,
+                 (activeField == 4) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
+        writeLeftText(ren, font, marioData.angleStr, angleInputRect, {0, 0, 0, 255}, 5);
         //خطوط جداکننده
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
@@ -589,7 +615,8 @@ int main(int argc, char *argv[]) {
         writeCenteredText(ren, font, "Add Extension", addExtensionBtn);
 
         if (fileMenuOpen) {
-            boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h, 160,
+            boxRGBA(ren, fileItemNew.x, fileItemNew.y, fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h,
+                    160,
                     70, 165, 255);
             boxRGBA(ren, fileItemSave.x, fileItemSave.y, fileItemSave.x + fileItemSave.w,
                     fileItemSave.y + fileItemSave.h, 160, 70, 165, 255);
@@ -601,15 +628,15 @@ int main(int argc, char *argv[]) {
             writeLeftText(ren, font, "Load Project", fileItemLoad, {255, 255, 255, 255}, 10);
         }
         if (marioTexture) {
-            SDL_Point center = { marioRect.w / 2, marioRect.h / 2 };
-            double finalAngle = (double)marioData.angle - 90.0;
+            SDL_Point center = {marioRect.w / 2, marioRect.h / 2};
+            double finalAngle = (double) marioData.angle - 90.0;
             SDL_RenderCopyEx(ren, marioTexture, NULL, &marioRect, finalAngle, &center, SDL_FLIP_NONE);
         }
 
         // رسم منوی اکستنشن اگر باز است
         if (extensionMenuOpen) {
             // پس زمینه نیمه شفاف
-            boxRGBA(ren, 0, 0,WINDOW_WIDTH, WINDOW_HEIGHT,255, 255, 255, 255);
+            boxRGBA(ren, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 255, 255, 255, 255);
 
             // دکمه بازگشت
             boxRGBA(ren, getBackBtn.x, getBackBtn.y,
