@@ -6,15 +6,20 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <cctype>
 
 using namespace std;
 
 const int WINDOW_WIDTH = 1000, WINDOW_HEIGHT = 600;
 const int MENU_H = 48;
+
+// مختصات اولیه ماریو
+const int MARIO_ORIGIN_X = 810, MARIO_ORIGIN_Y = 140;
+
 struct SpriteData {
     string name = "Mario";
-    string xStr = "810", yStr = "100", sizeStr = "100", angleStr = "90";
-    int x = 810, y = 100, size = 100, angle = 90;
+    string xStr = "0", yStr = "0", sizeStr = "100", angleStr = "90";
+    int x = 0, y = 0, size = 100, angle = 90;
 } marioData;
 
 // مشخص کردن اینکه کدام فیلد در حال ویرایش است (0: هیچکدام، 1: X، 2: Y، 3: Size، 4: Angle)
@@ -25,17 +30,18 @@ SDL_Rect xInputRect = {760, 350, 60, 25};
 SDL_Rect yInputRect = {860, 350, 60, 25};
 SDL_Rect sizeInputRect = {760, 390, 60, 25};
 SDL_Rect angleInputRect = {860, 390, 60, 25};
+
 // ناحیه‌ها
 SDL_Rect leftPanel = {80, 50, 200, 550};
-SDL_Rect workspace = {280, 50, 470, 550};
+SDL_Rect workspace = {280, 50, 430, 550};
 SDL_Rect stagePanel = {710, 50, 290, 550};
 
 //تعریف محدوده مربع بالایی برای ماریو
 SDL_Rect spriteArea = {710, 50, 290, 275};
-SDL_Texture *marioTexture = NULL;
+SDL_Texture *marioTexture;
 
 // متغیر ذخیره عکس
-SDL_Rect marioRect = {810, 100, 90, 90};
+SDL_Rect marioRect = {MARIO_ORIGIN_X, MARIO_ORIGIN_Y, 90, 90};
 
 // محلی که شبه بلوک ها ظاهر می شوند
 SDL_Rect subBlockArea = {90, 60, 180, 200};
@@ -49,18 +55,60 @@ SDL_Rect getBackBtn = {10, 40, 120, 50};
 SDL_Rect penBtn = {300, 50, 200, 200};
 
 void updateMarioFromInputs() {
-    try {
-        if (!marioData.xStr.empty()) marioData.x = stoi(marioData.xStr);
-        if (!marioData.yStr.empty()) marioData.y = stoi(marioData.yStr);
-        if (!marioData.sizeStr.empty()) marioData.size = stoi(marioData.sizeStr);
-        if (!marioData.angleStr.empty()) marioData.angle = stoi(marioData.angleStr);
+    bool updated = false;
 
-        marioRect.x = marioData.x;
-        marioRect.y = marioData.y;
+    // تغییر x
+    if (!marioData.xStr.empty()) {
+        char *endptr;
+        long val = strtol(marioData.xStr.c_str(), &endptr, 10);
+        if (*endptr == '\0' && endptr != marioData.xStr.c_str()) {
+            marioData.x = static_cast<int>(val);
+            updated = true;
+        }
+    }
+
+    // تغییر y
+    if (!marioData.yStr.empty()) {
+        char *endptr;
+        long val = strtol(marioData.yStr.c_str(), &endptr, 10);
+        if (*endptr == '\0' && endptr != marioData.yStr.c_str()) {
+            marioData.y = static_cast<int>(val);
+            updated = true;
+        }
+    }
+
+    // تغییر سایز
+    if (!marioData.sizeStr.empty()) {
+        char *endptr;
+        long val = strtol(marioData.sizeStr.c_str(), &endptr, 10);
+        if (*endptr == '\0' && endptr != marioData.sizeStr.c_str()) {
+            if (val > 0 && val <= 500) {
+                marioData.size = static_cast<int>(val);
+                updated = true;
+            }
+        }
+    }
+
+    // تغییر زاویه
+    if (!marioData.angleStr.empty()) {
+        char *endptr;
+        long val = strtol(marioData.angleStr.c_str(), &endptr, 10);
+        if (*endptr == '\0' && endptr != marioData.angleStr.c_str()) {
+            int angle = static_cast<int>(val) % 360;
+            if (angle < 0) angle += 360;
+            marioData.angle = angle;
+            updated = true;
+        }
+    }
+
+    // آپدیت مستطیل ماریو با مقادیر جدید
+    if (updated) {
+        marioRect.x = MARIO_ORIGIN_X + marioData.x;
+        marioRect.y = MARIO_ORIGIN_Y + marioData.y;
         float scale = marioData.size / 100.0f;
-        marioRect.w = 90 * scale;
-        marioRect.h = 90 * scale;
-    } catch (...) {}
+        marioRect.w = static_cast<int>(90 * scale);
+        marioRect.h = static_cast<int>(90 * scale);
+    }
 }
 
 void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
@@ -71,7 +119,6 @@ void drawRect(SDL_Renderer *ren, SDL_Rect r, SDL_Color fill) {
 bool pointInRect(int x, int y, const SDL_Rect &r) {
     return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
-
 
 struct BlockType {
     SDL_Color color;
@@ -301,8 +348,10 @@ int main(int argc, char *argv[]) {
     TTF_Font *font = TTF_OpenFont("calibrib.ttf", 14);
     TTF_Font *font2 = TTF_OpenFont("calibrib.ttf", 22);
     TTF_Font *font3 = TTF_OpenFont("calibrib.ttf", 17);
+    SDL_Rect msgRect = {50, 250, 300, 40};
+    TTF_Font *fontError = TTF_OpenFont("calibrib.ttf", 26);
 
-//بارگذاری قارچ اسپرایت
+    //بارگذاری قارچ اسپرایت
     marioTexture = IMG_LoadTexture(ren, "mario.png");
     SDL_SetTextureBlendMode(marioTexture, SDL_BLENDMODE_BLEND);
 
@@ -337,14 +386,33 @@ int main(int argc, char *argv[]) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) running = false;
 
-            //  مدیریت تایپ اعداد در فیلدها
+            // مدیریت تایپ اعداد در فیلدها (فقط اعداد و علامت منفی)
             if (e.type == SDL_TEXTINPUT && activeField > 0) {
-                if (activeField == 1) marioData.xStr += e.text.text;
-                else if (activeField == 2) marioData.yStr += e.text.text;
-                else if (activeField == 3) marioData.sizeStr += e.text.text;
-                else if (activeField == 4) marioData.angleStr += e.text.text;
+                string &targetStr = (activeField == 1) ? marioData.xStr :
+                                    (activeField == 2) ? marioData.yStr :
+                                    (activeField == 3) ? marioData.sizeStr :
+                                    marioData.angleStr;
+
+                const char *input = e.text.text;
+                for (int i = 0; input[i] != '\0'; ++i) {
+                    char c = input[i];
+                    bool allowed = false;
+
+                    if (activeField == 3) { // Size: فقط digits
+                        if (isdigit(c)) allowed = true;
+                    } else { // X, Y, Angle: digits و منفی در ابتدا
+                        if (isdigit(c))
+                            allowed = true;
+                        else if (c == '-' && targetStr.empty())
+                            allowed = true; // فقط اگر رشته خالی باشد می‌تواند منفی اضافه کند
+                    }
+
+                    if (allowed)
+                        targetStr += c;
+                }
                 updateMarioFromInputs();
             }
+
             if (e.type == SDL_KEYDOWN && activeField > 0) {
                 if (e.key.keysym.sym == SDLK_BACKSPACE) {
                     string *s = (activeField == 1) ? &marioData.xStr : (activeField == 2) ? &marioData.yStr
@@ -370,20 +438,16 @@ int main(int argc, char *argv[]) {
                 if (pointInRect(mx, my, xInputRect)) {
                     activeField = 1;
                     SDL_StartTextInput();
-                }
-                else if (pointInRect(mx, my, yInputRect)) {
+                } else if (pointInRect(mx, my, yInputRect)) {
                     activeField = 2;
                     SDL_StartTextInput();
-                }
-                else if (pointInRect(mx, my, sizeInputRect)) {
+                } else if (pointInRect(mx, my, sizeInputRect)) {
                     activeField = 3;
                     SDL_StartTextInput();
-                }
-                else if (pointInRect(mx, my, angleInputRect)) {
+                } else if (pointInRect(mx, my, angleInputRect)) {
                     activeField = 4;
                     SDL_StartTextInput();
-                }
-                else {
+                } else {
                     activeField = 0;
                     SDL_StopTextInput();
                 }
@@ -547,7 +611,14 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
-        // رسم بار بنفش بالایی
+        drawRect(ren, spriteArea, {240, 244, 255, 255}); // بخش بالایی (محل حرکت)
+
+        //رسم ماریو
+        SDL_Point center = {marioRect.w / 2, marioRect.h / 2};
+        double finalAngle = (double) marioData.angle - 90.0;
+        SDL_RenderCopyEx(ren, marioTexture, NULL, &marioRect, finalAngle, &center, SDL_FLIP_NONE);
+
+        // رسم بار بنفش بالایی و لوگو
         boxRGBA(ren, 0, 0, WINDOW_WIDTH, MENU_H, 160, 70, 165, 200);
         SDL_RenderCopy(ren, logo, NULL, &logoSize);
 
@@ -557,34 +628,31 @@ int main(int argc, char *argv[]) {
         drawRect(ren, workspace, {248, 249, 255, 255});
 
         // رسم بصری دو بخش پنل سمت راست
-        drawRect(ren, spriteArea, {240, 244, 255, 255}); // بخش بالایی (محل حرکت)
         SDL_Rect bottomPart = {710, 325, 290, 275};
         drawRect(ren, bottomPart, {210, 210, 220, 255});
 
-        // --- NEW: رسم پنل پایینی و فیلدها ---
+        // رسم پنل پایینی و فیلدها
 
         // فیلد X و Y
-        writeLeftText(ren, font, "X:", {720, 350, 30, 25}, {0, 0, 0, 255}, 0);
+        writeLeftText(ren, font, "X :", {730, 350, 30, 25}, {0, 0, 0, 255}, 0);
         drawRect(ren, xInputRect, (activeField == 1) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.xStr, xInputRect, {0, 0, 0, 255}, 5);
 
-        writeLeftText(ren, font, "Y:", {820, 350, 30, 25}, {0, 0, 0, 255}, 0);
+        writeLeftText(ren, font, "Y :", {830, 350, 30, 25}, {0, 0, 0, 255}, 0);
         drawRect(ren, yInputRect, (activeField == 2) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.yStr, yInputRect, {0, 0, 0, 255}, 5);
 
         // فیلد Size و Direction
-        writeLeftText(ren, font, "Size:", {715, 390, 45, 25}, {0, 0, 0, 255}, 0);
+        writeLeftText(ren, font, "Size :", {720, 390, 45, 25}, {0, 0, 0, 255}, 0);
         drawRect(ren, sizeInputRect,
                  (activeField == 3) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.sizeStr, sizeInputRect, {0, 0, 0, 255}, 5);
 
-        writeLeftText(ren, font, "Dir:", {820, 390, 40, 25}, {0, 0, 0, 255}, 0);
+        writeLeftText(ren, font, "Dir :", {825, 390, 40, 25}, {0, 0, 0, 255}, 0);
         drawRect(ren, angleInputRect,
                  (activeField == 4) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.angleStr, angleInputRect, {0, 0, 0, 255}, 5);
-        //خطوط جداکننده
-        vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
-        vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
+
         //خط افقی جدا کننده
         hlineRGBA(ren, 710, 1000, 325, 0, 0, 0, 255);
 
@@ -627,11 +695,10 @@ int main(int argc, char *argv[]) {
             writeLeftText(ren, font, "Save Project", fileItemSave, {255, 255, 255, 255}, 10);
             writeLeftText(ren, font, "Load Project", fileItemLoad, {255, 255, 255, 255}, 10);
         }
-        if (marioTexture) {
-            SDL_Point center = {marioRect.w / 2, marioRect.h / 2};
-            double finalAngle = (double) marioData.angle - 90.0;
-            SDL_RenderCopyEx(ren, marioTexture, NULL, &marioRect, finalAngle, &center, SDL_FLIP_NONE);
-        }
+
+        //خطوط جداکننده
+        vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
+        vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
 
         // رسم منوی اکستنشن اگر باز است
         if (extensionMenuOpen) {
@@ -651,11 +718,8 @@ int main(int argc, char *argv[]) {
             writeCenteredText(ren, font2, "Pen", penBtn);
 
             // اگر قلم قبلا اضافه شده، پیام نمایش بده
-            if (penExtensionAdded) {
-                SDL_Rect msgRect = {50, 250, 300, 40};
-                TTF_Font *fontError = TTF_OpenFont("calibrib.ttf", 26);
+            if (penExtensionAdded)
                 writeLeftText(ren, fontError, "Pen already added!", msgRect, {0, 0, 0, 255}, 0);
-            }
         }
 
         SDL_RenderPresent(ren);
