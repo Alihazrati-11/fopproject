@@ -7,6 +7,8 @@
 #include <iostream>
 #include <fstream>
 #include <cctype>
+#include <cstdlib>
+#include <sstream>
 
 using namespace std;
 
@@ -62,7 +64,6 @@ SDL_Rect penBtn = {300, 50, 200, 200};
 void updateMarioFromInputs() {
     bool updated = false;
 
-    // تغییر x
     if (!marioData.xStr.empty()) {
         char *endptr;
         long val = strtol(marioData.xStr.c_str(), &endptr, 10);
@@ -71,7 +72,6 @@ void updateMarioFromInputs() {
             updated = true;
         }
     }
-    // تغییر y
     if (!marioData.yStr.empty()) {
         char *endptr;
         long val = strtol(marioData.yStr.c_str(), &endptr, 10);
@@ -80,7 +80,6 @@ void updateMarioFromInputs() {
             updated = true;
         }
     }
-    // تغییر سایز
     if (!marioData.sizeStr.empty()) {
         char *endptr;
         long val = strtol(marioData.sizeStr.c_str(), &endptr, 10);
@@ -91,7 +90,6 @@ void updateMarioFromInputs() {
             }
         }
     }
-    // تغییر زاویه
     if (!marioData.angleStr.empty()) {
         char *endptr;
         long val = strtol(marioData.angleStr.c_str(), &endptr, 10);
@@ -102,7 +100,6 @@ void updateMarioFromInputs() {
             updated = true;
         }
     }
-    // آپدیت مستطیل ماریو با مقادیر جدید
     if (updated) {
         marioRect.x = MARIO_ORIGIN_X + marioData.x;
         marioRect.y = MARIO_ORIGIN_Y + marioData.y;
@@ -148,7 +145,6 @@ struct BlockInstance {
     SDL_Rect param2Rect = {0, 0, 0, 0};
 };
 
-// شبه بلوک های قابل درگ
 vector<BlockInstance> instances;
 vector<SubBlock> currentSubBlocks;
 
@@ -156,13 +152,37 @@ vector<SubBlock> currentSubBlocks;
 bool dropdownOpen = false;
 BlockInstance* activeDropdownBlock = nullptr;
 
+string operatorResultText = "";
+bool operatorResultError = false;
+
 vector<string> getDropdownOptions(const string& cmd) {
     if (cmd == "switch backdrop") return {"Bg 1", "Bg 2", "Bg 3"};
     if (cmd == "switch costume") return {"Cos 1", "Cos 2"};
     return {};
 }
 
-// تابع ساخت شبه بلوک ها
+bool readNumberValue(const string &text, double &outValue) {
+    if (text.empty()) return false;
+    const char *ptr = text.c_str();
+    char *endptr = nullptr;
+    outValue = strtod(ptr, &endptr);
+    if (endptr == ptr) return false;
+    while (*endptr != '\0' && isspace(static_cast<unsigned char>(*endptr))) endptr++;
+    if (*endptr != '\0') return false;
+    return true;
+}
+
+string formatNumber(double value) {
+    ostringstream ss;
+    ss.setf(ios::fixed);
+    ss.precision(2);
+    ss << value;
+    string out = ss.str();
+    while (out.size() > 1 && out.back() == '0') out.pop_back();
+    if (!out.empty() && out.back() == '.') out.pop_back();
+    return out;
+}
+
 void createSubBlocks(const BlockType &blockType) {
     currentSubBlocks.clear();
     int startX = subBlockArea.x + 10, startY = subBlockArea.y + 10;
@@ -239,13 +259,18 @@ void createSubBlocks(const BlockType &blockType) {
             currentSubBlocks.push_back(sb);
         }
     } else if (blockType.name == "operators") {
-        string names[5] = {"add", "subtract", "multiply", "divide", "random"};
+        string names[5] = {"add", "subtract", "multiply", "divide", "pick random"};
+        string defP1[5] = {"0", "0", "1", "1", "1"};
+        string defP2[5] = {"0", "0", "1", "1", "10"};
         for (int i = 0; i < 5; i++) {
             SubBlock sb;
             sb.color = blockType.color;
-            sb.rect = {startX, startY + (i * 45), 160, 35};
+            sb.rect = {startX, startY + (i * 38), 180, 30};
             sb.name = names[i];
             sb.typeIndex = 6;
+            sb.paramCount = 2;
+            sb.defaultParam1 = defP1[i];
+            sb.defaultParam2 = defP2[i];
             currentSubBlocks.push_back(sb);
         }
     } else if (blockType.name == "variables") {
@@ -271,7 +296,6 @@ void createSubBlocks(const BlockType &blockType) {
     }
 }
 
-//تابع اجرای شبه بلوک های looks
 void executeLooksCommand(const string& cmd, string p1, const string& p2, Uint32 currentTime) {
     if (cmd == "show")
         marioVisible = true;
@@ -279,7 +303,6 @@ void executeLooksCommand(const string& cmd, string p1, const string& p2, Uint32 
         marioVisible = false;
     else if (cmd == "change size") {
         int change = 0;
-        // چک کردن داشتن اعداد و علامت منفی
         if (!p1.empty()) {
             bool valid = true;
             for (size_t i = 0; i < p1.length(); i++) {
@@ -354,6 +377,73 @@ void executeLooksCommand(const string& cmd, string p1, const string& p2, Uint32 
         else if (p1 == "Bg 3") backdropIndex = 2;
     } else if (cmd == "next backdrop")
         backdropIndex = (backdropIndex + 1) % 3;
+}
+
+void executeOperatorCommand(const BlockInstance &b) {
+    if (b.customName == "pick random") {
+        double first = 0.0, second = 0.0;
+        bool ok1 = readNumberValue(b.param1, first);
+        bool ok2 = readNumberValue(b.param2, second);
+        if (!ok1 || !ok2) {
+            operatorResultError = true;
+            operatorResultText = "Invalid input";
+            return;
+        }
+        int minVal = static_cast<int>(first);
+        int maxVal = static_cast<int>(second);
+        if (minVal > maxVal) {
+            int tmp = minVal;
+            minVal = maxVal;
+            maxVal = tmp;
+        }
+        int range = maxVal - minVal + 1;
+        if (range <= 0) {
+            operatorResultError = true;
+            operatorResultText = "Invalid range";
+            return;
+        }
+        int value = minVal + (rand() % range);
+        operatorResultError = false;
+        operatorResultText = "random: " + to_string(value);
+        return;
+    }
+
+    double a = 0.0, c = 0.0;
+    bool okA = readNumberValue(b.param1, a);
+    bool okC = readNumberValue(b.param2, c);
+    if (!okA || !okC) {
+        operatorResultError = true;
+        operatorResultText = "Invalid input";
+        return;
+    }
+
+    double result = 0.0;
+    string opSymbol;
+    if (b.customName == "add") {
+        result = a + c;
+        opSymbol = " + ";
+    } else if (b.customName == "subtract") {
+        result = a - c;
+        opSymbol = " - ";
+    } else if (b.customName == "multiply") {
+        result = a * c;
+        opSymbol = " * ";
+    } else if (b.customName == "divide") {
+        if (c == 0.0) {
+            operatorResultError = true;
+            operatorResultText = "Cannot divide by zero";
+            return;
+        }
+        result = a / c;
+        opSymbol = " / ";
+    } else {
+        operatorResultError = true;
+        operatorResultText = "Unsupported";
+        return;
+    }
+
+    operatorResultError = false;
+    operatorResultText = formatNumber(a) + opSymbol + formatNumber(c) + " = " + formatNumber(result);
 }
 
 void writeCenteredText(SDL_Renderer *ren, TTF_Font *font, const string &text, SDL_Rect rect, SDL_Color color = {255, 255, 255, 255}) {
@@ -469,9 +559,10 @@ int main(int argc, char *argv[]) {
     TTF_Font *font2 = TTF_OpenFont("calibrib.ttf", 22);
     TTF_Font *font3 = TTF_OpenFont("calibrib.ttf", 17);
 
-    //بارگذاری قارچ اسپرایت
     marioTexture = IMG_LoadTexture(ren, "mario.png");
     SDL_SetTextureBlendMode(marioTexture, SDL_BLENDMODE_BLEND);
+
+    srand((unsigned int)SDL_GetTicks());
 
     vector<BlockType> blockTypes = {
             {{70,  150, 255, 255}, {0, 50,  80, 50}, "motion"},
@@ -504,7 +595,6 @@ int main(int argc, char *argv[]) {
         while (SDL_PollEvent(&e)) {
             if (e.type == SDL_QUIT) running = false;
 
-            // مدیریت تایپ اعداد در فیلدها (فقط اعداد و علامت منفی)
             if (e.type == SDL_TEXTINPUT) {
                 if (activeField > 0) {
                     string *targetStr = nullptr;
@@ -518,9 +608,9 @@ int main(int argc, char *argv[]) {
                         for (int i = 0; input[i] != '\0'; ++i) {
                             char c = input[i];
                             bool allowed = false;
-                            if (activeField == 3) { // Size: digits only
+                            if (activeField == 3) {
                                 if (isdigit(c)) allowed = true;
-                            } else { // X, Y, Angle: digits or leading minus
+                            } else {
                                 if (isdigit(c)) allowed = true;
                                 else if (c == '-' && targetStr->empty()) allowed = true;
                             }
@@ -533,7 +623,6 @@ int main(int argc, char *argv[]) {
             }
 
             if (e.type == SDL_KEYDOWN) {
-                // پاک کردن در فیلد های ماریو
                 if (activeField > 0) {
                     string *s = (activeField == 1) ? &marioData.xStr :
                                 (activeField == 2) ? &marioData.yStr :
@@ -548,7 +637,6 @@ int main(int argc, char *argv[]) {
                         SDL_StopTextInput();
                     }
                 }
-                    // پاک کردن در شبه بلوک ها
                 else if (activeParamStr != nullptr) {
                     if (e.key.keysym.sym == SDLK_BACKSPACE && !activeParamStr->empty())
                         activeParamStr->pop_back();
@@ -563,7 +651,6 @@ int main(int argc, char *argv[]) {
                 int mx = e.button.x, my = e.button.y;
                 bool consumed = false;
 
-                // بازشدن منوی کشویی
                 if (dropdownOpen && activeDropdownBlock != nullptr) {
                     vector<string> opts = getDropdownOptions(activeDropdownBlock->customName);
                     for (size_t j = 0; j < opts.size(); j++) {
@@ -583,7 +670,6 @@ int main(int argc, char *argv[]) {
                 }
                 if (consumed) continue;
 
-                // فیلدهای ماریو
                 bool clickedInput = false;
                 if (pointInRect(mx, my, xInputRect)) {
                     activeField = 1;
@@ -600,7 +686,6 @@ int main(int argc, char *argv[]) {
                 } else
                     activeField = 0;
 
-                // منوی اکستنشن
                 if (extensionMenuOpen) {
                     if (pointInRect(mx, my, getBackBtn)) {
                         extensionMenuOpen = false;
@@ -617,13 +702,11 @@ int main(int argc, char *argv[]) {
                     if (consumed) continue;
                 }
 
-                // دکمه اکستنشن
                 if (pointInRect(mx, my, addExtensionBtn)) {
                     extensionMenuOpen = true;
                     consumed = true;
                 }
 
-                // منوی فایل
                 if (pointInRect(mx, my, fileBtn)) {
                     fileMenuOpen = !fileMenuOpen;
                     consumed = true;
@@ -657,7 +740,6 @@ int main(int argc, char *argv[]) {
                 if (my < MENU_H) consumed = true;
                 if (consumed) continue;
 
-                // بررسی کلیک بلوک ها
                 for (const auto &i: blockTypes) {
                     if (pointInRect(mx, my, i.protoRect)) {
                         createSubBlocks(i);
@@ -667,7 +749,6 @@ int main(int argc, char *argv[]) {
                 }
                 if (consumed) continue;
 
-                // بررسی کلیک شبه بلوک ها
                 bool subBlockClicked = false;
                 for (const auto &i: currentSubBlocks) {
                     if (pointInRect(mx, my, i.rect)) {
@@ -690,7 +771,6 @@ int main(int argc, char *argv[]) {
                 }
                 if (subBlockClicked) continue;
 
-                // بررسی کلیک روی شبه بلوک های موجود
                 bool picked = false;
                 for (int i = (int) instances.size() - 1; i >= 0; --i) {
                     if (instances[i].paramCount >= 1 && pointInRect(mx, my, instances[i].param1Rect)) {
@@ -722,6 +802,8 @@ int main(int argc, char *argv[]) {
 
                         if (instances[i].typeIndex == 1)
                             executeLooksCommand(instances[i].customName, instances[i].param1, instances[i].param2, currentTime);
+                        else if (instances[i].typeIndex == 6)
+                            executeOperatorCommand(instances[i]);
 
                         BlockInstance temp = instances[i];
                         instances.erase(instances.begin() + i);
@@ -731,7 +813,6 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                // آغاز یا پایان ورودی متن
                 if (clickedInput)
                     SDL_StartTextInput();
                 else {
@@ -773,26 +854,21 @@ int main(int argc, char *argv[]) {
         SDL_SetRenderDrawColor(ren, 220, 220, 220, 255);
         SDL_RenderClear(ren);
 
-        // بار بنفش بالا و منوی فایل
         boxRGBA(ren, 0, 0, WINDOW_WIDTH, MENU_H, 160, 70, 165, 200);
         SDL_RenderCopy(ren, logo, NULL, &logoSize);
         writeLeftText(ren, font2, "File", fileBtn, {255, 255, 255, 255}, 10);
 
-        // پنل های کاربری
         drawRect(ren, leftPanel, {255, 255, 255, 255});
         drawRect(ren, workspace, {248, 249, 255, 255});
 
-        // پس زمینه ها
         SDL_Color bgColors[3] = {
                 {240, 244, 255, 255},{200, 255, 200, 255},{255, 200, 200, 255}
         };
         drawRect(ren, spriteArea, bgColors[backdropIndex]);
 
-        // مربع پایین ماریو
         SDL_Rect bottomPart = {710, 325, 290, 275};
         drawRect(ren, bottomPart, {210, 210, 220, 255});
 
-        // فیلدهای ورودی ماریو
         writeLeftText(ren, font, "X :", {730, 350, 30, 25}, {0, 0, 0, 255}, 0);
         drawRect(ren, xInputRect, (activeField == 1) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.xStr, xInputRect, {0, 0, 0, 255}, 5);
@@ -809,18 +885,15 @@ int main(int argc, char *argv[]) {
         drawRect(ren, angleInputRect, (activeField == 4) ? SDL_Color{255, 255, 200, 255} : SDL_Color{255, 255, 255, 255});
         writeLeftText(ren, font, marioData.angleStr, angleInputRect, {0, 0, 0, 255}, 5);
 
-        // خطوط جدا کننده افقی و عمودی
         vlineRGBA(ren, 280, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         vlineRGBA(ren, 710, 50, WINDOW_HEIGHT, 0, 0, 0, 255);
         hlineRGBA(ren, 710, 1000, 325, 0, 0, 0, 255);
 
-        // بلوک های چپ
         for (auto &bt: blockTypes) {
             drawRect(ren, bt.protoRect, bt.color);
             writeCenteredText(ren, font3, bt.name, bt.protoRect);
         }
 
-        // شبه بلوک ها
         for (auto &sb: currentSubBlocks) {
             drawRect(ren, sb.rect, sb.color);
             if (sb.paramCount == 1) {
@@ -832,35 +905,79 @@ int main(int argc, char *argv[]) {
                 drawRect(ren, p1Rect, {255, 255, 255, 255});
                 writeLeftText(ren, font, sb.defaultParam1, p1Rect, {0, 0, 0, 255}, 2);
             } else if (sb.paramCount == 2) {
-                string part1 = (sb.name == "say_for") ? "say" : "think";
-                int tw1 = 0, th = 0;
-                TTF_SizeText(font, part1.c_str(), &tw1, &th);
-                writeLeftText(ren, font, part1, sb.rect, {255, 255, 255, 255}, 5);
+                if (sb.typeIndex == 1 && (sb.name == "say_for" || sb.name == "think_for")) {
+                    string part1 = (sb.name == "say_for") ? "say" : "think";
+                    int tw1 = 0, th = 0;
+                    TTF_SizeText(font, part1.c_str(), &tw1, &th);
+                    writeLeftText(ren, font, part1, sb.rect, {255, 255, 255, 255}, 5);
 
-                SDL_Rect p1Rect = {sb.rect.x + 5 + tw1 + 5, sb.rect.y + 4, 45, sb.rect.h - 8};
-                drawRect(ren, p1Rect, {255, 255, 255, 255});
-                writeLeftText(ren, font, sb.defaultParam1, p1Rect, {0, 0, 0, 255}, 2);
+                    SDL_Rect p1Rect = {sb.rect.x + 5 + tw1 + 5, sb.rect.y + 4, 45, sb.rect.h - 8};
+                    drawRect(ren, p1Rect, {255, 255, 255, 255});
+                    writeLeftText(ren, font, sb.defaultParam1, p1Rect, {0, 0, 0, 255}, 2);
 
-                string part2 = " for ";
-                int tw2 = 0;
-                TTF_SizeText(font, part2.c_str(), &tw2, &th);
-                SDL_Rect part2Rect = {p1Rect.x + p1Rect.w, sb.rect.y, tw2, sb.rect.h};
-                writeLeftText(ren, font, part2, part2Rect, {255, 255, 255, 255}, 0);
+                    string part2 = " for ";
+                    int tw2 = 0;
+                    TTF_SizeText(font, part2.c_str(), &tw2, &th);
+                    SDL_Rect part2Rect = {p1Rect.x + p1Rect.w, sb.rect.y, tw2, sb.rect.h};
+                    writeLeftText(ren, font, part2, part2Rect, {255, 255, 255, 255}, 0);
 
-                SDL_Rect p2Rect = {part2Rect.x + tw2, sb.rect.y + 4, 30, sb.rect.h - 8};
-                drawRect(ren, p2Rect, {255, 255, 255, 255});
-                writeLeftText(ren, font, sb.defaultParam2, p2Rect, {0, 0, 0, 255}, 2);
+                    SDL_Rect p2Rect = {part2Rect.x + tw2, sb.rect.y + 4, 30, sb.rect.h - 8};
+                    drawRect(ren, p2Rect, {255, 255, 255, 255});
+                    writeLeftText(ren, font, sb.defaultParam2, p2Rect, {0, 0, 0, 255}, 2);
 
-                string part3 = " s";
-                SDL_Rect part3Rect = {p2Rect.x + p2Rect.w, sb.rect.y, 20, sb.rect.h};
-                writeLeftText(ren, font, part3, part3Rect, {255, 255, 255, 255}, 0);
+                    string part3 = " s";
+                    SDL_Rect part3Rect = {p2Rect.x + p2Rect.w, sb.rect.y, 20, sb.rect.h};
+                    writeLeftText(ren, font, part3, part3Rect, {255, 255, 255, 255}, 0);
+                } else if (sb.typeIndex == 6) {
+                    if (sb.name == "pick random") {
+                        string label = "pick random";
+                        int twLabel = 0, th = 0;
+                        TTF_SizeText(font, label.c_str(), &twLabel, &th);
+                        SDL_Rect labelRect = {sb.rect.x + 5, sb.rect.y, twLabel, sb.rect.h};
+                        writeLeftText(ren, font, label, labelRect, {255, 255, 255, 255}, 0);
+
+                        SDL_Rect p1Rect = {labelRect.x + twLabel + 8, sb.rect.y + 4, 36, sb.rect.h - 8};
+                        drawRect(ren, p1Rect, {255, 255, 255, 255});
+                        writeLeftText(ren, font, sb.defaultParam1, p1Rect, {0, 0, 0, 255}, 2);
+
+                        string mid = "to";
+                        int twMid = 0;
+                        TTF_SizeText(font, mid.c_str(), &twMid, &th);
+                        SDL_Rect midRect = {p1Rect.x + p1Rect.w + 6, sb.rect.y, twMid, sb.rect.h};
+                        writeLeftText(ren, font, mid, midRect, {255, 255, 255, 255}, 0);
+
+                        SDL_Rect p2Rect = {midRect.x + twMid + 6, sb.rect.y + 4, 36, sb.rect.h - 8};
+                        drawRect(ren, p2Rect, {255, 255, 255, 255});
+                        writeLeftText(ren, font, sb.defaultParam2, p2Rect, {0, 0, 0, 255}, 2);
+                    } else {
+                        SDL_Rect p1Rect = {sb.rect.x + 6, sb.rect.y + 4, 40, sb.rect.h - 8};
+                        drawRect(ren, p1Rect, {255, 255, 255, 255});
+                        writeLeftText(ren, font, sb.defaultParam1, p1Rect, {0, 0, 0, 255}, 2);
+
+                        string sign;
+                        if (sb.name == "add") sign = "+";
+                        else if (sb.name == "subtract") sign = "-";
+                        else if (sb.name == "multiply") sign = "*";
+                        else sign = "/";
+
+                        SDL_Rect signRect = {p1Rect.x + p1Rect.w + 6, sb.rect.y, 18, sb.rect.h};
+                        writeCenteredText(ren, font, sign, signRect);
+
+                        SDL_Rect p2Rect = {signRect.x + signRect.w + 6, sb.rect.y + 4, 40, sb.rect.h - 8};
+                        drawRect(ren, p2Rect, {255, 255, 255, 255});
+                        writeLeftText(ren, font, sb.defaultParam2, p2Rect, {0, 0, 0, 255}, 2);
+                    }
+                } else
+                    writeCenteredText(ren, font, sb.name, sb.rect);
             } else
                 writeCenteredText(ren, font, sb.name, sb.rect);
         }
 
-        // رسم شبه بلوک های قابل درگ
         for (auto &b: instances) {
             drawRect(ren, b.rect, blockTypes[b.typeIndex].color);
+            b.param1Rect = {0, 0, 0, 0};
+            b.param2Rect = {0, 0, 0, 0};
+
             if (b.paramCount == 1) {
                 int tw = 0, th = 0;
                 TTF_SizeText(font, b.customName.c_str(), &tw, &th);
@@ -872,35 +989,80 @@ int main(int argc, char *argv[]) {
                 drawRect(ren, b.param1Rect, boxColor);
                 writeLeftText(ren, font, b.param1, b.param1Rect, {0, 0, 0, 255}, 2);
             } else if (b.paramCount == 2) {
-                string part1 = (b.customName == "say_for") ? "say" : "think";
-                int tw1 = 0, th = 0;
-                TTF_SizeText(font, part1.c_str(), &tw1, &th);
-                writeLeftText(ren, font, part1, b.rect, {255, 255, 255, 255}, 5);
+                if (b.customName == "say_for" || b.customName == "think_for") {
+                    string part1 = (b.customName == "say_for") ? "say" : "think";
+                    int tw1 = 0, th = 0;
+                    TTF_SizeText(font, part1.c_str(), &tw1, &th);
+                    writeLeftText(ren, font, part1, b.rect, {255, 255, 255, 255}, 5);
 
-                b.param1Rect = {b.rect.x + 5 + tw1 + 5, b.rect.y + 4, 45, b.rect.h - 8};
-                SDL_Color boxColor1 = (activeParamStr == &b.param1) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
-                drawRect(ren, b.param1Rect, boxColor1);
-                writeLeftText(ren, font, b.param1, b.param1Rect, {0, 0, 0, 255}, 2);
+                    b.param1Rect = {b.rect.x + 5 + tw1 + 5, b.rect.y + 4, 45, b.rect.h - 8};
+                    SDL_Color boxColor1 = (activeParamStr == &b.param1) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                    drawRect(ren, b.param1Rect, boxColor1);
+                    writeLeftText(ren, font, b.param1, b.param1Rect, {0, 0, 0, 255}, 2);
 
-                string part2 = " for ";
-                int tw2 = 0;
-                TTF_SizeText(font, part2.c_str(), &tw2, &th);
-                SDL_Rect part2Rect = {b.param1Rect.x + b.param1Rect.w, b.rect.y, tw2, b.rect.h};
-                writeLeftText(ren, font, part2, part2Rect, {255, 255, 255, 255}, 0);
+                    string part2 = " for ";
+                    int tw2 = 0;
+                    TTF_SizeText(font, part2.c_str(), &tw2, &th);
+                    SDL_Rect part2Rect = {b.param1Rect.x + b.param1Rect.w, b.rect.y, tw2, b.rect.h};
+                    writeLeftText(ren, font, part2, part2Rect, {255, 255, 255, 255}, 0);
 
-                b.param2Rect = {part2Rect.x + tw2, b.rect.y + 4, 30, b.rect.h - 8};
-                SDL_Color boxColor2 = (activeParamStr == &b.param2) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
-                drawRect(ren, b.param2Rect, boxColor2);
-                writeLeftText(ren, font, b.param2, b.param2Rect, {0, 0, 0, 255}, 2);
+                    b.param2Rect = {part2Rect.x + tw2, b.rect.y + 4, 30, b.rect.h - 8};
+                    SDL_Color boxColor2 = (activeParamStr == &b.param2) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                    drawRect(ren, b.param2Rect, boxColor2);
+                    writeLeftText(ren, font, b.param2, b.param2Rect, {0, 0, 0, 255}, 2);
 
-                string part3 = " s";
-                SDL_Rect part3Rect = {b.param2Rect.x + b.param2Rect.w, b.rect.y, 20, b.rect.h};
-                writeLeftText(ren, font, part3, part3Rect, {255, 255, 255, 255}, 0);
+                    string part3 = " s";
+                    SDL_Rect part3Rect = {b.param2Rect.x + b.param2Rect.w, b.rect.y, 20, b.rect.h};
+                    writeLeftText(ren, font, part3, part3Rect, {255, 255, 255, 255}, 0);
+                } else if (b.typeIndex == 6) {
+                    if (b.customName == "pick random") {
+                        string label = "pick random";
+                        int twLabel = 0, th = 0;
+                        TTF_SizeText(font, label.c_str(), &twLabel, &th);
+                        SDL_Rect labelRect = {b.rect.x + 5, b.rect.y, twLabel, b.rect.h};
+                        writeLeftText(ren, font, label, labelRect, {255, 255, 255, 255}, 0);
+
+                        b.param1Rect = {labelRect.x + twLabel + 8, b.rect.y + 4, 40, b.rect.h - 8};
+                        SDL_Color boxColor1 = (activeParamStr == &b.param1) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                        drawRect(ren, b.param1Rect, boxColor1);
+                        writeLeftText(ren, font, b.param1, b.param1Rect, {0, 0, 0, 255}, 2);
+
+                        string mid = "to";
+                        int twMid = 0;
+                        TTF_SizeText(font, mid.c_str(), &twMid, &th);
+                        SDL_Rect midRect = {b.param1Rect.x + b.param1Rect.w + 6, b.rect.y, twMid, b.rect.h};
+                        writeLeftText(ren, font, mid, midRect, {255, 255, 255, 255}, 0);
+
+                        b.param2Rect = {midRect.x + twMid + 6, b.rect.y + 4, 40, b.rect.h - 8};
+                        SDL_Color boxColor2 = (activeParamStr == &b.param2) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                        drawRect(ren, b.param2Rect, boxColor2);
+                        writeLeftText(ren, font, b.param2, b.param2Rect, {0, 0, 0, 255}, 2);
+                    } else {
+                        b.param1Rect = {b.rect.x + 6, b.rect.y + 4, 40, b.rect.h - 8};
+                        SDL_Color boxColor1 = (activeParamStr == &b.param1) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                        drawRect(ren, b.param1Rect, boxColor1);
+                        writeLeftText(ren, font, b.param1, b.param1Rect, {0, 0, 0, 255}, 2);
+
+                        string sign;
+                        if (b.customName == "add") sign = "+";
+                        else if (b.customName == "subtract") sign = "-";
+                        else if (b.customName == "multiply") sign = "*";
+                        else sign = "/";
+
+                        SDL_Rect signRect = {b.param1Rect.x + b.param1Rect.w + 6, b.rect.y, 18, b.rect.h};
+                        writeCenteredText(ren, font, sign, signRect);
+
+                        b.param2Rect = {signRect.x + signRect.w + 6, b.rect.y + 4, 40, b.rect.h - 8};
+                        SDL_Color boxColor2 = (activeParamStr == &b.param2) ? SDL_Color{255, 200, 200, 255} : SDL_Color{255, 255, 255, 255};
+                        drawRect(ren, b.param2Rect, boxColor2);
+                        writeLeftText(ren, font, b.param2, b.param2Rect, {0, 0, 0, 255}, 2);
+                    }
+                } else
+                    writeCenteredText(ren, font, b.customName, b.rect);
             } else
                 writeCenteredText(ren, font, b.customName, b.rect);
         }
 
-        // منوی بازشده در شبه بلوک ها
         if (dropdownOpen && activeDropdownBlock != nullptr) {
             vector<string> opts = getDropdownOptions(activeDropdownBlock->customName);
             for (size_t j = 0; j < opts.size(); j++) {
@@ -916,13 +1078,19 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // دکمه افزودن اکستنشن
+        SDL_Rect operatorsLabelRect = {720, 520, 260, 20};
+        writeLeftText(ren, font, "Operators Result:", operatorsLabelRect, {0, 0, 0, 255}, 0);
+        if (!operatorResultText.empty()) {
+            SDL_Color resColor = operatorResultError ? SDL_Color{180, 0, 0, 255} : SDL_Color{0, 100, 0, 255};
+            SDL_Rect operatorsValueRect = {720, 540, 260, 20};
+            writeLeftText(ren, font, operatorResultText, operatorsValueRect, resColor, 0);
+        }
+
         boxRGBA(ren, addExtensionBtn.x, addExtensionBtn.y,
                 addExtensionBtn.x + addExtensionBtn.w, addExtensionBtn.y + addExtensionBtn.h,
                 100, 150, 200, 255);
         writeCenteredText(ren, font, "Add Extension", addExtensionBtn);
 
-        // منوی فایل
         if (fileMenuOpen) {
             boxRGBA(ren, fileItemNew.x, fileItemNew.y,
                     fileItemNew.x + fileItemNew.w, fileItemNew.y + fileItemNew.h,
@@ -939,7 +1107,6 @@ int main(int argc, char *argv[]) {
             writeLeftText(ren, font, "Load Project", fileItemLoad, {255, 255, 255, 255}, 10);
         }
 
-        // بخش حرف زدن ماریو
         if (marioTexture && marioVisible) {
             SDL_Point center = {marioRect.w / 2, marioRect.h / 2};
             double finalAngle = (double) marioData.angle - 90.0;
@@ -974,7 +1141,6 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // منوی اکستنشن
         if (extensionMenuOpen) {
             boxRGBA(ren, 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, 255, 255, 255, 255);
             boxRGBA(ren, getBackBtn.x, getBackBtn.y,
