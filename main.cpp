@@ -152,7 +152,8 @@ vector<SubBlock> currentSubBlocks;
 bool dropdownOpen = false;
 BlockInstance* activeDropdownBlock = nullptr;
 
-string operatorResultText = "";
+//متغیرهای بخش operators
+string operatorResultText;
 bool operatorResultError = false;
 
 vector<string> getDropdownOptions(const string& cmd) {
@@ -161,13 +162,14 @@ vector<string> getDropdownOptions(const string& cmd) {
     return {};
 }
 
+//خواندن عدد از بخش operators
 bool readNumberValue(const string &text, double &outValue) {
     if (text.empty()) return false;
     const char *ptr = text.c_str();
     char *endptr = nullptr;
     outValue = strtod(ptr, &endptr);
     if (endptr == ptr) return false;
-    while (*endptr != '\0' && isspace(static_cast<unsigned char>(*endptr))) endptr++;
+    while (*endptr != '\0' && isspace((unsigned char)*endptr)) endptr++;
     if (*endptr != '\0') return false;
     return true;
 }
